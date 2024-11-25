@@ -30,6 +30,15 @@ class WebcamDataset(Dataset):
         # Load the image data and GHI values from .npy files
         self.images = np.load(images_path)  # Shape: (num_samples, height, width, channels)
         self.ghi_values = np.load(ghi_values_path)  # Shape: (num_samples,)
+
+        # Remove rows where any NaN values are present in the images or ghi_values
+        valid_indices = ~np.isnan(self.ghi_values)  # Find indices where GHI is not NaN
+        valid_indices &= ~np.isnan(self.images).any(axis=(1, 2, 3))  # Find indices where images do not have NaN values
+        
+        # Filter out invalid rows
+        self.images = self.images[valid_indices]
+        self.ghi_values = self.ghi_values[valid_indices]
+        
         self.transform = transform
 
     def __len__(self):
@@ -40,6 +49,15 @@ class WebcamDataset(Dataset):
             int: The number of samples (images and corresponding GHI values) in the dataset.
         """
         return self.images.shape[0]  # The number of samples is the number of images
+
+    def __shape__(self):
+        """
+        Returns the number of samples in the dataset.
+
+        Returns:
+            int: The number of samples (images and corresponding GHI values) in the dataset.
+        """
+        return torch.tensor(self.images[0], dtype=torch.float32).permute(2, 0, 1).shape
 
     def __getitem__(self, idx):
         """

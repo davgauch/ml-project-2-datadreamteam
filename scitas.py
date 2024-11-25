@@ -41,7 +41,7 @@ def main(DATA_FOLDER):
     dnn_to_bnn(model, bnn_prior_parameters)
 
     # Create the Trainer object
-    trainer = Trainer(model, train_dataset, val_dataset, test_dataset, device=device, batch_size=BATCH_SIZE, epochs=10)
+    trainer = Trainer(model, train_dataset, val_dataset, test_dataset, batch_size=BATCH_SIZE, epochs=10, device=device, model_save_folder="output/model/", train_loss_file="output/train_losses.csv", test_loss_file="output/test_losses.csv")
 
     print(f"Training the model (device: {device}) ...")
 

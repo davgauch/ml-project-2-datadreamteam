@@ -4,9 +4,9 @@ import torch
 import torch.optim as optim
 import torch.nn as nn
 from torch.utils.data import DataLoader
-
+import os 
 class Trainer:
-    def __init__(self, model, train_dataset, val_dataset, test_dataset, batch_size=32, learning_rate=1e-3, epochs=10, device="cpu", train_loss_file="train_losses.csv", test_loss_file="test_losses.csv"):
+    def __init__(self, model, train_dataset, val_dataset, test_dataset, batch_size=32, learning_rate=1e-3, epochs=10, device="cpu", model_save_folder="output/model", train_loss_file="train_losses.csv", test_loss_file="test_losses.csv"):
         """
         Initializes the Trainer class with all the necessary components.
         
@@ -29,13 +29,26 @@ class Trainer:
         self.criterion = nn.MSELoss()
         self.optimizer = optim.Adam(self.model.parameters(), lr=learning_rate)
         self.epochs = epochs
+
         self.train_loss_file = train_loss_file 
         self.test_loss_file = test_loss_file 
+        self.model_save_folder = model_save_folder
+
+        # Ensure the directories for saving models and loss files exist
+        if model_save_folder:
+            os.makedirs(self.model_save_folder, exist_ok=True)
+
+        if self.train_loss_file:
+            os.makedirs(os.path.dirname(self.train_loss_file), exist_ok=True)
+
+        if self.test_loss_file:
+            os.makedirs(os.path.dirname(self.test_loss_file), exist_ok=True)
 
         # Create or overwrite the loss files with headers
-        with open(self.train_loss_file, mode='w', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow(['Epoch', 'Train Loss', 'Validation Loss', 'Processed Train Batches', 'Skipped Train Batches', 'Processed Val Batches', 'Skipped Val Batches', 'Train Time (s)', 'Eval Time (s)'])
+        if self.train_loss_file:
+            with open(self.train_loss_file, mode='w', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow(['Epoch', 'Train Loss', 'Validation Loss', 'Processed Train Batches', 'Skipped Train Batches', 'Processed Val Batches', 'Skipped Val Batches', 'Train Time (s)', 'Eval Time (s)'])
 
     def train(self):
         """
@@ -68,12 +81,14 @@ class Trainer:
             epoch_results = [epoch + 1, train_loss, val_loss, processed_train_batches, skipped_train_batches, processed_val_batches, skipped_val_batches, train_time, eval_time]
             
             # Immediately write results to the CSV file after each epoch
-            with open(self.train_loss_file, mode='a', newline='') as file:
-                writer = csv.writer(file)
-                writer.writerow(epoch_results)
+            if self.train_loss_file:
+                with open(self.train_loss_file, mode='a', newline='') as file:
+                    writer = csv.writer(file)
+                    writer.writerow(epoch_results)
 
             # Saving the model after each epoch
-            torch.save(self.model.state_dict(), f"model_epoch_{epoch+1}.pth")
+            if self.model_save_folder:
+                torch.save(self.model.state_dict(), f"{self.model_save_folder}model_epoch_{epoch+1}.pth")
 
         print("Training complete. Losses and batch info saved to:", self.train_loss_file)
 
@@ -164,9 +179,10 @@ class Trainer:
         avg_loss = running_loss / max(1, processed_batches)
 
         # Log results to test loss file
-        with open(self.test_loss_file, mode='w', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow(['MSE', 'Processed Val Batches', 'Skipped Val Batches', 'Testing Time (s)'])
-            writer.writerow([avg_loss, processed_batches, skipped_batches, test_time])
+        if self.test_loss_file:
+            with open(self.test_loss_file, mode='w', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow(['MSE', 'Processed Val Batches', 'Skipped Val Batches', 'Testing Time (s)'])
+                writer.writerow([avg_loss, processed_batches, skipped_batches, test_time])
 
         return avg_loss, processed_batches, skipped_batches

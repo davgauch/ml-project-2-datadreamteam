@@ -17,7 +17,7 @@ class WebcamDataset(Dataset):
         transform (callable, optional): Optional transform to be applied on a sample.
     """
     
-    def __init__(self, images_path, ghi_values_path, transform=None):
+    def __init__(self, images_path, ghi_values_path, transform=None, subset=None):
         """
         Initializes the WebcamDataset object by loading the image data and GHI values from the provided file paths.
 
@@ -38,7 +38,11 @@ class WebcamDataset(Dataset):
         # Filter out invalid rows
         self.images = self.images[valid_indices]
         self.ghi_values = self.ghi_values[valid_indices]
-        
+
+        if subset != None:
+            self.images = self.images[:subset]
+            self.ghi_values = self.ghi_values[:subset]
+
         self.transform = transform
 
     def __len__(self):

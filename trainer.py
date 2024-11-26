@@ -5,6 +5,17 @@ import torch.optim as optim
 import torch.nn as nn
 from torch.utils.data import DataLoader
 import os 
+
+
+class RMSELoss(nn.Module):
+    def __init__(self):
+        super(RMSELoss, self).__init__()
+        self.mse = nn.MSELoss()
+
+    def forward(self, y_pred, y_true):
+        return torch.sqrt(self.mse(y_pred, y_true) + 1e-6)  # Add epsilon for numerical stability
+
+    
 class Trainer:
     def __init__(self, model, train_dataset, val_dataset, test_dataset, batch_size=32, learning_rate=1e-3, epochs=10, device="cpu", model_save_folder="output/model", train_loss_file="train_losses.csv", test_loss_file="test_losses.csv"):
         """
@@ -26,7 +37,7 @@ class Trainer:
         self.test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
         
         self.device = device
-        self.criterion = nn.MSELoss()
+        self.criterion = RMSELoss()
         self.optimizer = optim.Adam(self.model.parameters(), lr=learning_rate)
         self.epochs = epochs
 

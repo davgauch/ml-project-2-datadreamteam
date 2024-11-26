@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 
 class CNN_LSTM(nn.Module):
-    def __init__(self,input_shape=(32,3,250,250),out_channels=1): #input_shape =(32,3,250,250),
+    def __init__(self,input_shape,out_channels=1): #input_shape =(32,3,224,224),
         super().__init__()
         self.batch_size, self.channels = input_shape[0],input_shape[-3]
         # CNN layers

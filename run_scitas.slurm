@@ -5,7 +5,7 @@
 #SBATCH --qos=cs433
 
 #SBATCH --partition=gpu
-#SBATCH --gres=gpu:4
+#SBATCH --gres=gpu:2
 
 #SBATCH --ntasks=1
 
@@ -14,11 +14,11 @@
 
 #SBATCH --mem-per-gpu=4G
 
-#SBATCH --output=./output_bayesianV1/job_output.log
-#SBATCH --error=./output_bayesianV1/job_error.log
-#SBATCH --job-name=bayesianV1
+#SBATCH --output=./output_bayesian_with_earlystopper/job_output.log
+#SBATCH --error=./output_bayesian_with_earlystopper/job_error.log
+#SBATCH --job-name=bayesian_with_earlystopper
 
 module load gcc cuda python
 source ./venvs/pytorch-env/bin/activate
-srun python scitas.py 200 1 ./data ./output_bayesianV1 --bayesian=True
+srun python scitas.py 200 1 ./data ./output_bayesian_with_earlystopper --bayesian=True
 deactivate

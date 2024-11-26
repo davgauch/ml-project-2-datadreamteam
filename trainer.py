@@ -8,6 +8,8 @@ import os
 from torch.utils.data.distributed import DistributedSampler
 from torch.nn.parallel import DistributedDataParallel as DDP
 
+from early_stopper import EarlyStopper
+
 class RMSELoss(nn.Module):
     def __init__(self):
         super(RMSELoss, self).__init__()
@@ -56,6 +58,9 @@ class Trainer:
         
         self.criterion = RMSELoss()
         self.optimizer = optim.Adam(self.model.parameters(), lr=learning_rate)
+        self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, 'min', verbose=True)
+        self.early_stopper = EarlyStopper(patience=5, min_delta=0.001)
+
         self.epochs = epochs
         self.save_every = save_every
 
@@ -104,6 +109,8 @@ class Trainer:
             # Calculate time taken for evaluation
             eval_time = time.time() - start_eval_time
 
+            scheduler.step(val_loss)
+
             print(f"Epoch {epoch+1}/{self.epochs}, Validation Loss: {val_loss:.4f}, Processed Validation Batches: {processed_val_batches}, Skipped Validation Batches: {skipped_val_batches}, Eval Time: {eval_time:.2f}s")
             
             # Store losses and batch info for this epoch
@@ -123,6 +130,10 @@ class Trainer:
                 }
                 torch.save(snapshot, self.model_snapshot_file)
                 print(f"Epoch {epoch} | Training snapshot saved at {self.model_snapshot_file}")
+
+            if self.early_stopper.early_stop(validation_loss):             
+                print("Early stopped training.")
+                break
 
         print("Training complete. Losses and batch info saved to:", self.train_loss_file)
 

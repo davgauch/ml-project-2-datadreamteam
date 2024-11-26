@@ -91,17 +91,41 @@ Here is a reformulated version of your instructions:
    deactivate
    ```
 
----
 
-# Running the Job
+### Data Normalization
 
-First update the GASPAR_ID in run_scitas.slurm, the second line should be:
+To normalize the data directly on SCITAS, follow these steps:
 
-#SBATCH --chdir=/scratch/izar/<GASPAR_ID>
+1. Ensure that both the data and script are located in your `/scratch` folder.
+  
+
+2. **Submit the job to SCITAS**:  
+   Navigate to the folder containing all your files (`/scratch/izar/<GASPARID>`) and run the following command:
+   ```bash
+   sbatch run_normalize.slurm
+   ```
+
+3. **Wait for the process to complete**:  
+   The normalization process should take less than 5 minutes to finish.
 
 
-Then, to submit your job to the SCITAS cluster, use the following command:
+### Model Training Instructions
 
-```bash
-sbatch run_scitas.slurm
-```
+1. **Update the `GASPAR_ID` in the `run_scitas.slurm` file:**
+   - Modify the second line to set the correct working directory:
+     ```bash
+     #SBATCH --chdir=/scratch/izar/<GASPAR_ID>
+     ```
+
+2. **Adjust other parameters as needed:**
+   - You can modify the job name, the number of epochs (first argument in the Python command on line 23), or any other parameters as necessary.
+
+3. **Set the working directory for the output:**
+   - Ensure that both the Python command (last argument) and the paths for error and output files are updated so that files don’t overwrite each other.
+   - Update paths in the `--output` and `--error` fields.
+
+4. **Submit your job to the SCITAS cluster**:
+   Use the following command to submit your job:
+   ```bash
+   sbatch run_scitas.slurm
+   ```

@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 
 class CNN_LSTM(nn.Module):
-    def __init__(self,input_shape=(32,3,250,250),out_channels=1): #input_shape =(32,3,250,250),
+    def __init__(self,input_shape=(32,3,224,224),out_channels=1): #input_shape =(32,3,224,224),
         super().__init__()
         self.batch_size, self.channels = input_shape[0],input_shape[-3]
         # CNN layers
@@ -14,8 +14,8 @@ class CNN_LSTM(nn.Module):
         self.conv4 = nn.Conv2d(in_channels=32, out_channels=32, kernel_size=3)
 
         # keep affine=False,track_running_stats=False -- to avoid error in training
-        self.bn1 = nn.BatchNorm2d(16, affine=False,track_running_stats=False)#momentum=0.01)#,eps=1e-3)
-        self.bn2 = nn.BatchNorm2d(32, affine=False,track_running_stats=False)#, momentum=0.01)#, momentum=0.01,eps=1e-3)
+        self.bn1 = nn.BatchNorm2d(16, affine=False, track_running_stats=False)#momentum=0.01)#,eps=1e-3)
+        self.bn2 = nn.BatchNorm2d(32, affine=False, track_running_stats=False)#, momentum=0.01)#, momentum=0.01,eps=1e-3)
 
         self.pool = nn.MaxPool2d(kernel_size=2)
 

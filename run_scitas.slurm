@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --chdir=/scratch/izar/dgauch
+#SBATCH --chdir=/scratch/izar/odefranc
 
 #SBATCH --account=cs433
 #SBATCH --qos=cs433

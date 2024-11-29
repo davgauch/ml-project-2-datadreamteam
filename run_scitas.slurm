@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --chdir=/scratch/izar/fcomte
+#SBATCH --chdir=/scratch/izar/dgauch
 
 #SBATCH --account=cs433
 #SBATCH --qos=cs433
@@ -14,11 +14,11 @@
 
 #SBATCH --mem-per-gpu=4G
 
-#SBATCH --output=./output_bayesian_with_earlystopperv2/job_output.log
-#SBATCH --error=./output_bayesian_with_earlystopperv2/job_error.log
-#SBATCH --job-name=bayesian_with_earlystopperv2
+#SBATCH --output=./output_quantile_with_earlystopper/job_output.log
+#SBATCH --error=./output_quantile_with_earlystopper/job_error.log
+#SBATCH --job-name=quantile_with_earlystopper
 
 module load gcc cuda python
 source ./venvs/pytorch-env/bin/activate
-srun python scitas.py 200 1 ./data ./output_bayesian_with_earlystopperv2 --bayesian=True
+srun python scitas.py 200 1 ./data ./output_quantile_with_earlystopper --quantile
 deactivate

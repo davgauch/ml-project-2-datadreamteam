@@ -18,6 +18,10 @@ def plot_predictions_vs_ground_truth(model, val_loader, device):
         outputs = model(X_batch).detach().cpu().numpy()
         labels = y_batch.cpu().numpy()
 
+        # Debugging: Print shapes and check values
+        print(f"Outputs: {outputs[:5]}")  # Print first 5 predictions for debugging
+        print(f"Labels: {labels[:5]}")    # Print first 5 ground truth values
+
         # Plot the predictions vs ground truth
         plt.figure(figsize=(10, 6))
         plt.plot(outputs, label='Predictions', color='blue')
@@ -29,4 +33,3 @@ def plot_predictions_vs_ground_truth(model, val_loader, device):
         plt.show()
 
         break  # Only plot for the first batch
-

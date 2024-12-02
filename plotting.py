@@ -125,10 +125,10 @@ def plot_predictions_bnn(
 
 
 plot_predictions_bnn(
-    preds_file="./bayesianV3Test500MC/preds.npy",
-    true_labels_file="./bayesianV3Test500MC/true_labels.npy",
-    lower_bounds_file="./bayesianV3Test500MC/pred_lower_bounds.npy",
-    upper_bounds_file="./bayesianV3Test500MC/pred_upper_bounds.npy",
-    plot_save_path="bayesianV3Test500MCplot.png",
-    num_labels=100
+    preds_file="./bayesianV4Test50MC/preds.npy",
+    true_labels_file="./bayesianV4Test50MC/true_labels.npy",
+    lower_bounds_file="./bayesianV4Test50MC/pred_lower_bounds.npy",
+    upper_bounds_file="./bayesianV4Test50MC/pred_upper_bounds.npy",
+    plot_save_path="bayesianV4Test50MCplot.png",
+    num_labels=50
 )

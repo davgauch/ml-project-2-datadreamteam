@@ -14,7 +14,7 @@ from scipy.stats import norm
 from early_stopper import EarlyStopper
 
 class Trainer:
-    def __init__(self, model, train_dataset, val_dataset, test_dataset, gpu_id, batch_size=32, learning_rate=1e-3, epochs=10, save_every=1, working_dir="/output", num_mc=3, num_monte_carlo=500, model_path=None):
+    def __init__(self, model, train_dataset, val_dataset, test_dataset, gpu_id, batch_size=32, learning_rate=1e-3, epochs=10, save_every=1, working_dir="/output", num_mc=3, num_monte_carlo=100, model_path=None):
         """
         Initializes the Trainer class with all the necessary components.
 
@@ -79,7 +79,6 @@ class Trainer:
                 self.early_stopper.min_delta = early_stopper_state.get("min_delta", self.early_stopper.min_delta)
                 self.early_stopper.counter = early_stopper_state.get("counter", self.early_stopper.counter)
                 self.early_stopper.min_validation_loss = early_stopper_state.get("min_validation_loss", self.early_stopper.min_validation_loss)
-                self.early_stopper.early_stop = early_stopper_state.get("early_stop", self.early_stopper.early_stop)
                 loaded_elements.append("EARLY_STOPPER_STATE")
             
             print(f"Model loaded from {model_path}.")
@@ -91,8 +90,8 @@ class Trainer:
             self.model = self.model.to(gpu_id)
             self.model = DDP(model, device_ids=[gpu_id])
             train_sampler = DistributedSampler(train_dataset)
-            val_sampler = DistributedSampler(val_dataset)
-            test_sampler = DistributedSampler(test_dataset)
+            val_sampler = DistributedSampler(val_dataset, shuffle=False)
+            test_sampler = DistributedSampler(test_dataset, shuffle=False)
 
             pin_memory = True
         else:
@@ -180,8 +179,7 @@ class Trainer:
                         "patience": self.early_stopper.patience,
                         "min_delta": self.early_stopper.min_delta,
                         "counter": self.early_stopper.counter,
-                        "best_score": self.early_stopper.best_score,
-                        "early_stop": self.early_stopper.early_stop,
+                        "min_validation_loss": self.early_stopper.min_validation_loss,
                     },
                 }
                 torch.save(snapshot, self.model_snapshot_file)

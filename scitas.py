@@ -30,7 +30,7 @@ def ddp_setup(rank: int, world_size: int):
     init_process_group(backend="nccl", rank=rank, world_size=world_size)
    
 
-def main(rank, world_size, epochs, save_every, data_dir, working_dir, batch_size, bayesian, normalized, skip_training, model_path, subset):
+def main(rank, world_size, epochs, save_every, data_dir, working_dir, batch_size, bayesian, normalized, skip_training, model_path, subset, num_monte_carlo):
     print("Setuping DDP...", flush=True)
     if world_size > 1:
         ddp_setup(rank=rank, world_size=world_size)
@@ -69,7 +69,7 @@ def main(rank, world_size, epochs, save_every, data_dir, working_dir, batch_size
     print("Creating the trainer object...", flush=True)
 
     # Create the Trainer object
-    trainer = Trainer(model, train_dataset, val_dataset, test_dataset, gpu_id=rank, batch_size=batch_size, epochs=epochs, working_dir=working_dir, model_path=model_path)
+    trainer = Trainer(model, train_dataset, val_dataset, test_dataset, gpu_id=rank, batch_size=batch_size, epochs=epochs, working_dir=working_dir, model_path=model_path, num_monte_carlo=num_monte_carlo)
 
     if not skip_training:        
         print(f"Training the model...", flush=True)
@@ -94,14 +94,14 @@ if __name__ == "__main__":
     parser.add_argument('--skip_training', default=False, help='Boolean to run the model in testing mode')
     parser.add_argument('--model_path', default=None, type=str, help='Path to the saved model (.pt) for testing or resuming training')
     parser.add_argument('--subset', default=None, type=int, help='The size of the subset. None if full dataset')
-
+    parser.add_argument('--num_monte_carlo', default=50, type=int, help='The number of Monte Carlo samples to be drawn for inference')
     args = parser.parse_args()
 
     if torch.cuda.is_available():
         world_size = torch.cuda.device_count()  
         print(f"Cuda available! Working with {world_size} GPUs")
     
-        mp.spawn(main, args=(world_size, args.total_epochs, args.save_every, args.data_dir, args.working_dir, args.batch_size, args.bayesian, args.normalized, args.skip_training, args.model_path, args.subset), nprocs=world_size)
+        mp.spawn(main, args=(world_size, args.total_epochs, args.save_every, args.data_dir, args.working_dir, args.batch_size, args.bayesian, args.normalized, args.skip_training, args.model_path, args.subset, args.num_monte_carlo), nprocs=world_size)
     else:
         print(f"Cuda not available! Working with single threaded CPU.")
-        main(rank=0, world_size=1, epochs=args.total_epochs, save_every=args.save_every, data_dir=args.data_dir, working_dir=args.working_dir, batch_size=args.batch_size, bayesian=args.bayesian, normalized=args.normalized, skip_training=args.skip_training, model_path=args.model_path, subset=args.subset)
+        main(rank=0, world_size=1, epochs=args.total_epochs, save_every=args.save_every, data_dir=args.data_dir, working_dir=args.working_dir, batch_size=args.batch_size, bayesian=args.bayesian, normalized=args.normalized, skip_training=args.skip_training, model_path=args.model_path, subset=args.subset, num_monte_carlo=args.num_monte_carlo)

@@ -9,16 +9,16 @@
 
 #SBATCH --ntasks=1
 
-#SBATCH --time=6:0:0
+#SBATCH --time=0:30:0
 #SBATCH --cpus-per-task=2
 
 #SBATCH --mem-per-gpu=4G
 
-#SBATCH --output=./output_bayesian_with_earlystopperv2/job_output.log
-#SBATCH --error=./output_bayesian_with_earlystopperv2/job_error.log
-#SBATCH --job-name=bayesian_with_earlystopperv2
+#SBATCH --output=./bayesianV3Test500MC/job_output.log
+#SBATCH --error=./bayesianV3Test500MC/job_error.log
+#SBATCH --job-name=bayesianV3Test500MC
 
 module load gcc cuda python
 source ./venvs/pytorch-env/bin/activate
-srun python scitas.py 200 1 ./data ./output_bayesian_with_earlystopperv2 --bayesian=True
+srun python scitas.py 200 1 ./data ./bayesianV3Test500MC --bayesian=True --normalized=True --skip_training=True --model_path=./bayesianV3/weights.pt
 deactivate

@@ -9,6 +9,7 @@ from torch.utils.data.distributed import DistributedSampler
 from torch.nn.parallel import DistributedDataParallel as DDP
 from early_stopper import EarlyStopper
 from interval_prediction import predict_intervals, display_prediction_intervals
+import numpy as np
 
 # Define Quantile Loss for quantile regression
 class QuantileLoss(nn.Module):
@@ -177,6 +178,12 @@ class Trainer:
             self.optimizer.zero_grad()
             outputs = self.model(inputs)
 
+            # Handle tuple outputs (e.g., from Monte Carlo Dropout)
+            if isinstance(outputs, tuple):
+                mean_prediction, lower_bound, upper_bound = outputs
+                outputs = mean_prediction
+
+
             if torch.isnan(outputs).any():
                 skipped_batches += 1
                 print("Warning: Skipping batch due to NaN in outputs.")
@@ -194,47 +201,75 @@ class Trainer:
 
 
     def evaluate(self):
-        """Evaluates the model on the validation dataset."""
+        """
+        Evaluates the model on the validation dataset, calculates the mean predictions, and 95% confidence intervals.
+        """
         self.model.eval()
         running_loss = 0.0
         processed_batches = 0
         skipped_batches = 0
-        prediction_intervals = []
+
+        predictions = []
+        lower_bounds = []
+        upper_bounds = []
+        ground_truths = []
 
         with torch.no_grad():
             for inputs, labels in self.val_loader:
+                # Skip batches with NaN values
                 if torch.isnan(inputs).any() or torch.isnan(labels).any():
                     skipped_batches += 1
                     print("Warning: Skipping batch due to NaN values.")
                     continue
 
-                if isinstance(self.criterion, QuantileLoss):
-                    labels = self._expand_labels_for_quantiles(labels, len(self.criterion.quantiles))
-
+                # Move inputs and labels to the appropriate device
                 if torch.cuda.is_available():
                     inputs, labels = inputs.to(self.gpu_id).float(), labels.to(self.gpu_id).float()
                 else:
                     inputs, labels = inputs.to("cpu").float(), labels.to("cpu").float()
 
-                # Get model outputs
+                # Get predictions and uncertainties
                 outputs = self.model(inputs)
-                if torch.isnan(outputs).any():
+                if isinstance(outputs, tuple):  # For Monte Carlo Dropout models
+                    mean_prediction, lower_bound, upper_bound = outputs
+                else:
+                    raise ValueError("The model must return a tuple of (mean, lower_bound, upper_bound).")
+
+                # Save results for analysis
+                predictions.append(mean_prediction.cpu())
+                lower_bounds.append(lower_bound.cpu())
+                upper_bounds.append(upper_bound.cpu())
+                ground_truths.append(labels.cpu())
+
+                # Check for NaN in outputs
+                if torch.isnan(mean_prediction).any():
                     skipped_batches += 1
                     print("Warning: Skipping batch due to NaN in outputs.")
                     continue
 
-                # Get prediction intervals using the custom function
-                lower, upper = predict_intervals(self.model, inputs)  # Use the model and inputs to get intervals
-                prediction_intervals.append((lower, upper))  # Store the intervals for each batch
-
                 # Compute loss
-                loss = self.criterion(outputs, labels)
+                loss = self.criterion(mean_prediction, labels)
                 running_loss += loss.item()
                 processed_batches += 1
 
-        avg_loss = running_loss / max(1, processed_batches)
+        # Aggregate results
+        predictions = torch.cat(predictions).numpy()
+        lower_bounds = torch.cat(lower_bounds).numpy()
+        upper_bounds = torch.cat(upper_bounds).numpy()
+        ground_truths = torch.cat(ground_truths).numpy()
 
-        # After evaluating, display the prediction intervals for the first few samples
-        display_prediction_intervals(prediction_intervals)  # Visualize the prediction intervals
+        # Save results to a file
+        results = {
+            "predictions": predictions,
+            "lower_bounds": lower_bounds,
+            "upper_bounds": upper_bounds,
+            "ground_truths": ground_truths,
+        }
+        output_path = "mc_dropout_results.npy"
+        np.save(output_path, results)
+        print(f"Evaluation results saved to {output_path}")
+
+        # Compute average loss
+        avg_loss = running_loss / max(1, processed_batches)
 
         return avg_loss, processed_batches, skipped_batches

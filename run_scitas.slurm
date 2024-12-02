@@ -14,11 +14,13 @@
 
 #SBATCH --mem-per-gpu=4G
 
-#SBATCH --output=./output_quantile_with_earlystopper/job_output.log
-#SBATCH --error=./output_quantile_with_earlystopper/job_error.log
-#SBATCH --job-name=quantile_with_earlystopper
+#SBATCH --output=./output_monte_carlo_dropout/job_output.log
+#SBATCH --error=./output_monte_carlo_dropout/job_error.log
+#SBATCH --job-name=monte_carlo_dropout
 
 module load gcc cuda python
 source ./venvs/pytorch-env/bin/activate
-srun python scitas.py 200 1 ./data ./output_quantile_with_earlystopper --quantile
+
+srun python scitas.py 80 1 ./data ./output_monte_carlo_dropout --monte_carlo_dropout --mc_samples 5
+
 deactivate

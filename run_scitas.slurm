@@ -9,16 +9,16 @@
 
 #SBATCH --ntasks=1
 
-#SBATCH --time=6:0:0
+#SBATCH --time=10:0:0
 #SBATCH --cpus-per-task=2
 
 #SBATCH --mem-per-gpu=4G
 
-#SBATCH --output=./output_quantile_with_earlystopper/job_output.log
-#SBATCH --error=./output_quantile_with_earlystopper/job_error.log
-#SBATCH --job-name=quantile_with_earlystopper
+#SBATCH --output=./output_quantile_v3/job_output.log
+#SBATCH --error=./output_quantile_v3/job_error.log
+#SBATCH --job-name=quantile_v3
 
 module load gcc cuda python
 source ./venvs/pytorch-env/bin/activate
-srun python scitas.py 200 1 ./data ./output_quantile_with_earlystopper --quantile
+srun python scitas.py 200 1 ./data ./output_quantile_v2 --normalized=True
 deactivate

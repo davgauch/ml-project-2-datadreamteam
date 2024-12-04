@@ -20,5 +20,5 @@
 
 module load gcc cuda python
 source ./venvs/pytorch-env/bin/activate
-srun python scitas.py 200 1 ./data ./output_quantile_v2 --normalized=True
+srun python scitas.py 200 1 ./data ./output_quantile_v3 --normalized=True
 deactivate

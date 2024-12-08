@@ -14,7 +14,7 @@ from scipy.stats import norm
 from early_stopper import EarlyStopper
 
 class Trainer:
-    def __init__(self, model, train_dataset, val_dataset, test_dataset, gpu_id, batch_size=32, learning_rate=1e-3, epochs=10, save_every=1, working_dir="/output", num_mc=3, num_monte_carlo=100, model_path=None):
+    def __init__(self, model, train_dataset, val_dataset, test_dataset, gpu_id, batch_size=32, learning_rate=1e-3, epochs=10, save_every=1, working_dir="/output", num_mc=3, num_monte_carlo=20, model_path=None):
         """
         Initializes the Trainer class with all the necessary components.
 
@@ -29,7 +29,7 @@ class Trainer:
             epochs (int, optional): The number of epochs to train for. Default is 10.
             save_every (int, optional): The frequency (in epochs) at which the model is saved. Default is 1.
             working_dir (str, optional): The directory where output (like saved models or logs) will be stored. Default is "/output".
-            num_mc (int, optional): The number of Monte Carlo runs during training. Default is 3.
+            num_mc (int, optional): The number of Monte Carlo runs during training. Default is 15.
             num_monte_carlo (int, optional): The number of Monte Carlo samples to be drawn for inference. Default is 20.
         """
         

@@ -54,25 +54,34 @@ class CNN_LSTM(nn.Module):
         x = self.dropout2(x)
         return x
 
-    def forward(self, x,return_features=False):
+def forward(self, x1, x2, return_features=False):
+    """
+    Forward pass for two images x1 and x2.
+    x1, x2: Shape (batch_size, n_img, channels, height, width) or (batch_size, channels, height, width)
+    """
+    # Handle batch sizes for two images
+    if x1.ndim == 5:  # Input is a sequence of images
+        current_batch_size, n_img, channels, height, width = x1.size()
+        x1 = x1.view(-1, channels, height, width)  # Flatten sequence dimension
+        x2 = x2.view(-1, channels, height, width)  # Flatten sequence dimension
 
-        if x.ndim == 5:
-            current_batch_size,n_img, channels, height, width = x.size()
-            x = x.view(-1,channels, height, width)
-            x = self.cnn_forward(x)
-            
-            x = x.view(current_batch_size, n_img, -1)
-        else:
-            current_batch_size = x.size(0)
-            x = self.cnn_forward(x)
-              
-        if return_features:
-            return x
+    # Pass both images through the CNN
+    features_x1 = self.cnn_forward(x1)
+    features_x2 = self.cnn_forward(x2)
 
-        x = x.reshape(current_batch_size, 1, -1)
-        x,_ = self.lstm1(x) ## output of all timesteps
-        x,_ = self.lstm2(x)
-        x = F.relu(self.fc1(x[:,-1,:])) # only last timestep
-        x = F.relu(self.fc2(x))
+    # Combine features (concatenation)
+    combined_features = torch.cat([features_x1, features_x2], dim=1)  # Concatenate along the feature dimension
 
-        return x #(batch_size,1)
+    if return_features:
+        return combined_features
+
+    # Reshape for LSTM input
+    combined_features = combined_features.view(current_batch_size, -1, combined_features.size(-1))
+
+    # LSTM layers
+    x, _ = self.lstm1(combined_features)  # output of all timesteps
+    x, _ = self.lstm2(x)
+    x = F.relu(self.fc1(x[:, -1, :]))  # only last timestep
+    x = F.relu(self.fc2(x))
+
+    return x  # (batch_size, 1)

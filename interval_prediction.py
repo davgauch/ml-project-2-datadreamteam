@@ -12,7 +12,7 @@ def predict_intervals(model, inputs):
     model.eval()
     with torch.no_grad():
         outputs = model(inputs)
-    lower_bound = outputs[:, 0]  # Lower quantile
+    lower_bound = torch.clamp(outputs[:, 0], min=0.0)# Lower quantile (GHI cannot be negative)
     upper_bound = outputs[:, 1]  # Upper quantile
     return lower_bound, upper_bound
 

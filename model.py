@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from initialization import initialize_weights
 
 
 class CNN_LSTM(nn.Module):
@@ -36,6 +37,7 @@ class CNN_LSTM(nn.Module):
         # Dense layers
         self.fc1 = nn.Linear(64, 64)
         self.fc2 = nn.Linear(64, out_channels)
+        self.apply(initialize_weights)
 
     def cnn_forward(self, x):
         # x shape: (batch_size, channels, height, width) 
@@ -73,6 +75,6 @@ class CNN_LSTM(nn.Module):
         x,_ = self.lstm1(x) ## output of all timesteps
         x,_ = self.lstm2(x)
         x = F.relu(self.fc1(x[:,-1,:])) # only last timestep
-        x = F.relu(self.fc2(x))
+        x = self.fc2(x)
 
         return x #(batch_size,1)

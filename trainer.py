@@ -52,7 +52,7 @@ class Trainer:
         self.criterion = QuantileLoss()
 
         # Optimizer and scheduler setup
-        self.optimizer = optim.Adam(self.model.parameters(), lr=learning_rate)
+        self.optimizer = optim.Adam(self.model.parameters(), lr=learning_rate, weight_decay=1e-5)
         self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, 'min', verbose=True)
         self.early_stopper = EarlyStopper(patience=20, min_delta=0.01)
         if model_path:
@@ -227,7 +227,7 @@ class Trainer:
 
             self.optimizer.zero_grad()
             outputs = self.model(inputs)
-
+            
             if torch.isnan(outputs).any():
                 skipped_batches += 1
                 print("Warning: Skipping batch due to NaN in outputs.")
@@ -272,7 +272,7 @@ class Trainer:
     
                 # Get model outputs
                 outputs = self.model(inputs)
-    
+            
                 # Compute loss
                 loss = self.criterion(outputs, labels)
                 running_loss += loss.item()
@@ -324,6 +324,7 @@ class Trainer:
 
                 # Compute loss
                 outputs = self.model(inputs)
+                
                 loss = self.criterion(outputs, labels)
                 running_loss += loss.item()
                 processed_batches += 1

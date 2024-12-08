@@ -122,9 +122,9 @@ def plot_predictions_quantile(
 
 
 plot_predictions_quantile(
-    true_labels_file="./output_quantile_v3/true_labels.npy",
-    lower_bounds_file="./output_quantile_v3/pred_lower_bounds.npy",
-    upper_bounds_file="./output_quantile_v3/pred_upper_bounds.npy",
-    plot_save_path="quantileTestPlot.png",
+    true_labels_file="./output_quantile_v4_inf/true_labels.npy",
+    lower_bounds_file="./output_quantile_v4_inf/pred_lower_bounds.npy",
+    upper_bounds_file="./output_quantile_v4_inf/pred_upper_bounds.npy",
+    plot_save_path="quantileTestPlot_v4.png",
     num_labels=100
 )

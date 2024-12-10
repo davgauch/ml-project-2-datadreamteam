@@ -41,8 +41,8 @@ class Trainer:
 
         self.criterion = nn.MSELoss()
         self.optimizer = optim.Adam(self.model.parameters(), lr=learning_rate)
-        self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, 'min', verbose=True)
-        self.early_stopper = EarlyStopper(patience=20, min_delta=0.01)
+        self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, 'min')
+        self.early_stopper = EarlyStopper(patience=20, min_decrease=0.005)
 
         if model_path:
             print(f"Loading model from {model_path}...", flush=True)
@@ -76,7 +76,7 @@ class Trainer:
             early_stopper_state = snapshot.get("EARLY_STOPPER_STATE", None)
             if early_stopper_state:
                 self.early_stopper.patience = early_stopper_state.get("patience", self.early_stopper.patience)
-                self.early_stopper.min_delta = early_stopper_state.get("min_delta", self.early_stopper.min_delta)
+                self.early_stopper.min_decrease = early_stopper_state.get("min_decrease", self.early_stopper.min_decrease)
                 self.early_stopper.counter = early_stopper_state.get("counter", self.early_stopper.counter)
                 self.early_stopper.min_validation_loss = early_stopper_state.get("min_validation_loss", self.early_stopper.min_validation_loss)
                 loaded_elements.append("EARLY_STOPPER_STATE")
@@ -177,7 +177,7 @@ class Trainer:
                     "EPOCHS_RUN": epoch,
                     "EARLY_STOPPER_STATE": {
                         "patience": self.early_stopper.patience,
-                        "min_delta": self.early_stopper.min_delta,
+                        "min_decrease": self.early_stopper.min_decrease,
                         "counter": self.early_stopper.counter,
                         "min_validation_loss": self.early_stopper.min_validation_loss,
                     },
@@ -206,9 +206,9 @@ class Trainer:
         processed_batches = 0
         skipped_batches = 0
 
-        for inputs, labels in self.train_loader:
+        for (img1, img2), labels in self.train_loader:
             # Skip invalid batches (NaN checks, etc.)
-            if torch.isnan(inputs).any() or torch.isnan(labels).any():
+            if torch.isnan(img1).any() or torch.isnan(img2).any() or torch.isnan(labels).any():
                 skipped_batches += 1
                 print("Warning: Skipping batch due to NaN values.")
                 continue
@@ -217,10 +217,8 @@ class Trainer:
             labels = labels.view(-1, 1)
 
             # Move inputs and labels to the device (GPU/CPU)
-            if torch.cuda.is_available():
-                inputs, labels = inputs.to(self.gpu_id).float(), labels.to(self.gpu_id).float()
-            else:
-                inputs, labels = inputs.to("cpu").float(), labels.to("cpu").float()
+            device = self.gpu_id if torch.cuda.is_available() else "cpu"
+            img1, img2, labels = img1.to(device).float(), img2.to(device).float(), labels.to(device).float()
             
             # Zero the parameter gradients
             self.optimizer.zero_grad()
@@ -230,7 +228,7 @@ class Trainer:
             kl_ = []
 
             for mc_run in range(self.num_mc):
-                output = self.model(inputs)
+                output = self.model(img1, img2)
                 kl = get_kl_loss(self.model)
                 output_.append(output)
                 kl_.append(kl)
@@ -270,9 +268,9 @@ class Trainer:
         skipped_batches = 0
         
         with torch.no_grad():
-            for inputs, labels in self.val_loader:
+            for (img1, img2), labels in self.val_loader:
                 # Skip invalid batches (NaN checks, etc.)
-                if torch.isnan(inputs).any() or torch.isnan(labels).any():
+                if torch.isnan(img1).any() or torch.isnan(img2).any() or torch.isnan(labels).any():
                     skipped_batches += 1
                     print("Warning: Skipping batch due to NaN values.")
                     continue
@@ -281,17 +279,15 @@ class Trainer:
                 labels = labels.view(-1, 1)
 
                 # Move inputs and labels to the device (GPU/CPU)
-                if torch.cuda.is_available():
-                    inputs, labels = inputs.to(self.gpu_id).float(), labels.to(self.gpu_id).float()
-                else:
-                    inputs, labels = inputs.to("cpu").float(), labels.to("cpu").float()
+                device = self.gpu_id if torch.cuda.is_available() else "cpu"
+                img1, img2, labels = img1.to(device).float(), img2.to(device).float(), labels.to(device).float()
 
                 # Forward pass
                 output_ = []
                 kl_ = []
 
                 for mc_run in range(self.num_mc):
-                    output = self.model(inputs)
+                    output = self.model(img1, img2)
                     kl = get_kl_loss(self.model)
                     output_.append(output)
                     kl_.append(kl)
@@ -301,7 +297,7 @@ class Trainer:
 
                 # Loss
                 criterion_loss = self.criterion(output, labels)
-                kl_div = kl / inputs.size(0)  # Normalize KL divergence by batch size
+                kl_div = kl / img1.size(0)  # Normalize KL divergence by batch size
                 loss = criterion_loss + kl_div
 
                 # Collect statistics
@@ -330,9 +326,9 @@ class Trainer:
         upper_bounds = []  # Store upper bounds of 95% CI
 
         with torch.no_grad():
-            for inputs, labels in self.test_loader:
+            for (img1, img2), labels in self.test_loader:
                 # Skip invalid batches (NaN checks, etc.)
-                if torch.isnan(inputs).any() or torch.isnan(labels).any():
+                if torch.isnan(img1).any() or torch.isnan(img2).any() or torch.isnan(labels).any():
                     skipped_batches += 1
                     print("Warning: Skipping batch due to NaN values.")
                     continue
@@ -341,15 +337,13 @@ class Trainer:
                 labels = labels.view(-1, 1)
 
                 # Move inputs and labels to the device (GPU/CPU)
-                if torch.cuda.is_available():
-                    inputs, labels = inputs.to(self.gpu_id).float(), labels.to(self.gpu_id).float()
-                else:
-                    inputs, labels = inputs.to("cpu").float(), labels.to("cpu").float()
+                device = self.gpu_id if torch.cuda.is_available() else "cpu"
+                img1, img2, labels = img1.to(device).float(), img2.to(device).float(), labels.to(device).float()
 
                 # Monte Carlo Sampling
                 batch_preds_mc = []
                 for mc_run in range(self.num_monte_carlo):
-                    outputs = self.model(inputs)
+                    outputs = self.model(img1, img2)
                     batch_preds_mc.append(outputs.cpu().numpy())
 
                 # Collect MC predictions and true labels

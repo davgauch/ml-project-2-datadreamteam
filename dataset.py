@@ -9,7 +9,7 @@ class WebcamDataset(Dataset):
     This implementation uses lazy loading to avoid loading all the data into memory.
     """
 
-    def __init__(self, images_path, ghi_values_path, transform=None, subset=None, normalize_labels=True):
+    def __init__(self, images_path_bc, images_path_m, ghi_values_path, transform=None, subset=None, normalize_labels=True):
         """
         Initializes the WebcamDataset object by loading the image data and GHI values from the provided file paths.
 
@@ -20,7 +20,8 @@ class WebcamDataset(Dataset):
             subset (int, optional): The number of samples to randomly sample from the dataset.
         """
         # Load the image data and GHI values from .npy files
-        self.images = np.load(images_path, mmap_mode='r')
+        self.images_bc = np.load(images_path_bc, mmap_mode='r')
+        self.images_m = np.load(images_path_m, mmap_mode='r')
         self.ghi_values = np.load(ghi_values_path)
 
         # Remove rows where any NaN values are present in the images or ghi_values
@@ -30,8 +31,9 @@ class WebcamDataset(Dataset):
 
         # Perform random subsampling if subset is specified
         if subset:
-            indices = np.random.choice(len(self.images), size=subset, replace=False)
-            self.images = self.images[:subset]
+            indices = np.random.choice(len(self.images_bc), size=subset, replace=False)
+            self.images_bc = self.images_bc[:subset]
+            self.images_m = self.images_m[:subset]
             self.ghi_values = self.ghi_values[:subset]
 
         # Compute normalization parameters for images
@@ -66,17 +68,23 @@ class WebcamDataset(Dataset):
                 - ghi_value (float): The GHI value corresponding to the image at the specified index.
         """
         # Get the image and the corresponding GHI value
-        image = self.images[idx]  # Shape: (height, width, channels)
+        image_bc = self.images_bc[idx]  # Shape: (height, width, channels)
+        image_m = self.images_m[idx]  # Shape: (height, width, channels)
         ghi_value = self.ghi_values[idx]  # Shape: () - a scalar
 
         # Normalize the image
         # image = (image - self.image_mean) / self.image_std
-        image = torch.tensor(image, dtype=torch.float32).permute(2, 0, 1)  # Convert to (C, H, W)
-        image = F.interpolate(image.unsqueeze(0), size=(224, 224), mode='bilinear').squeeze(0)
+        image_bc = torch.tensor(image_bc, dtype=torch.float32).permute(2, 0, 1)  # Convert to (C, H, W)
+        image_bc = F.interpolate(image_bc.unsqueeze(0), size=(224, 224), mode='bilinear').squeeze(0)
+
+        image_m = torch.tensor(image_m, dtype=torch.float32).permute(2, 0, 1)  # Convert to (C, H, W)
+        image_m = F.interpolate(image_m.unsqueeze(0), size=(224, 224), mode='bilinear').squeeze(0)
 
         ghi_value = torch.tensor(ghi_value, dtype=torch.float32).unsqueeze(0)
 
         if self.transform:
-            image = self.transform(image)
+            image_bc = self.transform(image_bc)
+            image_m = self.transform(image_m)
 
-        return image, ghi_value  # Return the image and its corresponding GHI value
+
+        return (image_bc, image_m), ghi_value  # Return the images and its corresponding GHI value

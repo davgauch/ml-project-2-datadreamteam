@@ -14,9 +14,9 @@
 
 #SBATCH --mem-per-gpu 64G
 
-#SBATCH --output=./normalization/job_output.log
-#SBATCH --error=./normalization/job_error.log
-#SBATCH --job-name=normalization
+#SBATCH --output=./normalizationM/job_output.log
+#SBATCH --error=./normalizationM/job_error.log
+#SBATCH --job-name=normalizatioM
 
 module load gcc cuda python
 source ./venvs/pytorch-env/bin/activate

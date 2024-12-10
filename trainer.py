@@ -126,8 +126,8 @@ class Trainer:
             self.model = self.model.to(self.gpu_id)
             self.model = DDP(self.model, device_ids=[self.gpu_id])
             train_sampler = DistributedSampler(train_dataset)
-            val_sampler = DistributedSampler(val_dataset)
-            test_sampler = DistributedSampler(test_dataset)
+            val_sampler = DistributedSampler(val_dataset, shuffle=False)
+            test_sampler = DistributedSampler(test_dataset,shuffle=False)
             pin_memory = True
         else:
             train_sampler = val_sampler = test_sampler = None

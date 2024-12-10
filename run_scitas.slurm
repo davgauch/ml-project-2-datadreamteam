@@ -14,11 +14,11 @@
 
 #SBATCH --mem-per-gpu=4G
 
-#SBATCH --output=./output_quantile_v5/job_output.log
-#SBATCH --error=./output_quantile_v5/job_error.log
-#SBATCH --job-name=quantile_v5
+#SBATCH --output=./output_quantile_v6/job_output.log
+#SBATCH --error=./output_quantile_v6/job_error.log
+#SBATCH --job-name=quantile_v6
 
 module load gcc cuda python
 source ./venvs/pytorch-env/bin/activate
-srun python scitas.py 200 1 ./data ./output_quantile_v5 --normalized=True
+srun python scitas.py 200 1 ./data ./output_quantile_v6 --normalized=True
 deactivate

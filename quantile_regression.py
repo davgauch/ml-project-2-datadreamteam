@@ -3,7 +3,7 @@ import torch.nn as nn
 from initialization import initialize_weights
 
 class QuantileRegressionModel(nn.Module):
-    def __init__(self, base_model, num_quantiles=2):
+    def __init__(self, base_model, num_quantiles=3):
         """
         Extends the base CNN_LSTM model for quantile regression.
         Args:

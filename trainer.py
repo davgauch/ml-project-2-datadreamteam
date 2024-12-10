@@ -9,11 +9,11 @@ import numpy as np
 from torch.utils.data.distributed import DistributedSampler
 from torch.nn.parallel import DistributedDataParallel as DDP
 from early_stopper import EarlyStopper
-from interval_prediction import predict_intervals, display_prediction_intervals
+from interval_prediction import predict_intervals
 
 # Define Quantile Loss for quantile regression
 class QuantileLoss(nn.Module):
-    def __init__(self, quantiles=[0.025, 0.975]):
+    def __init__(self, quantiles=[0.025, 0.5, 0.975]):
         super(QuantileLoss, self).__init__()
         self.quantiles = quantiles
 
@@ -108,6 +108,7 @@ class Trainer:
         self.model_snapshot_file = f"{working_dir}/weights.pt"
         self.test_true_labels_file = f"{working_dir}/true_labels.npy"
         self.test_pred_lower_bounds_file = f"{working_dir}/pred_lower_bounds.npy"
+        self.test_pred_mean_file= f"{working_dir}/pred_mean.npy"
         self.test_pred_upper_bounds_file = f"{working_dir}/pred_upper_bounds.npy"
 
         # Ensure the directories for saving models and loss files exist
@@ -319,8 +320,8 @@ class Trainer:
                     inputs, labels = inputs.to("cpu").float(), labels.to("cpu").float()
 
                 # Predict intervals using the quantile regression model
-                lower_bound, upper_bound = predict_intervals(self.model, inputs)
-                pred_intervals.append((lower_bound.cpu().numpy(), upper_bound.cpu().numpy()))
+                lower_bound, mean, upper_bound = predict_intervals(self.model, inputs)
+                pred_intervals.append((lower_bound.cpu().numpy(), mean.cpu().numpy(), upper_bound.cpu().numpy()))
 
                 # Compute loss
                 outputs = self.model(inputs)
@@ -331,7 +332,8 @@ class Trainer:
 
         # Post-processing
         lower_bounds = np.concatenate([pi[0] for pi in pred_intervals], axis=0)
-        upper_bounds = np.concatenate([pi[1] for pi in pred_intervals], axis=0)
+        mean = np.concatenate([pi[1] for pi in pred_intervals], axis=0)
+        upper_bounds = np.concatenate([pi[2] for pi in pred_intervals], axis=0)
         true_labels = np.concatenate(true_labels, axis=0)  # Remains 1D
 
         test_time = time.time() - start_test_time
@@ -339,6 +341,7 @@ class Trainer:
 
         # Save predictions and labels for analysis
         np.save(self.test_pred_lower_bounds_file, lower_bounds)
+        np.save(self.test_pred_mean_file, mean)
         np.save(self.test_pred_upper_bounds_file, upper_bounds)
         np.save(self.test_true_labels_file, true_labels)  # Original labels saved here
 

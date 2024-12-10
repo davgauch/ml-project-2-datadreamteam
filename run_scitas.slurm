@@ -9,7 +9,7 @@
 
 #SBATCH --ntasks=1
 
-#SBATCH --time=6:0:0
+#SBATCH --time=10:0:0
 #SBATCH --cpus-per-task=2
 
 #SBATCH --mem-per-gpu=4G
@@ -21,6 +21,8 @@
 module load gcc cuda python
 source ./venvs/pytorch-env/bin/activate
 
-srun python scitas.py 80 1 ./data ./output_monte_carlo_dropout --monte_carlo_dropout --mc_samples 5
+srun python scitas.py 200 1 ./data ./output_monte_carlo_dropout --monte_carlo_dropout --mc_samples 10
+
+# srun python scitas.py 200 1 ./data ./output_monte_carlo_dropout --monte_carlo_dropout --skip_training --mc_samples 5
 
 deactivate

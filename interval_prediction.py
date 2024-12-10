@@ -1,6 +1,6 @@
 import torch
 
-def predict_intervals(model, inputs):
+def predict_intervals(model, img1, img2):
     """
     Predicts intervals using the trained quantile regression model.
     Args:
@@ -11,7 +11,7 @@ def predict_intervals(model, inputs):
     """
     model.eval()
     with torch.no_grad():
-        outputs = model(inputs)
+        outputs = model(img1, img2)
     lower_bound = torch.clamp(outputs[:, 0], min=0.0)# Lower quantile (GHI cannot be negative)
     mean = outputs[:, 1]
     upper_bound = outputs[:, 2]  # Upper quantile

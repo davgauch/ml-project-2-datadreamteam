@@ -21,7 +21,7 @@ class QuantileRegressionModel(nn.Module):
         else:
             raise AttributeError("Base model must have an 'fc2' layer that is a fully connected layer.")
 
-    def forward(self, x):
+    def forward(self, x1, x2):
         """
         Forward pass through the modified base model.
         Args:
@@ -29,5 +29,5 @@ class QuantileRegressionModel(nn.Module):
         Returns:
             torch.Tensor: Predicted quantiles.
         """
-        outputs = self.base_model(x)
+        outputs = self.base_model(x1,x2)
         return outputs

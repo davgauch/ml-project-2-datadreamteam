@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --chdir=/scratch/izar/dgauch
+#SBATCH --chdir=/scratch/izar/fcomte
 
 #SBATCH --account=cs433
 #SBATCH --qos=cs433
@@ -14,11 +14,11 @@
 
 #SBATCH --mem-per-gpu=4G
 
-#SBATCH --output=./output_quantile_v6/job_output.log
-#SBATCH --error=./output_quantile_v6/job_error.log
-#SBATCH --job-name=quantile_v6
+#SBATCH --output=./output_quantile_v7/job_output.log
+#SBATCH --error=./output_quantile_v7/job_error.log
+#SBATCH --job-name=output_quantile_v7
 
 module load gcc cuda python
 source ./venvs/pytorch-env/bin/activate
-srun python scitas.py 200 1 ./data ./output_quantile_v6 --normalized=True
+srun python scitas.py 200 1 ./data ./output_quantile_v7 --normalized=True
 deactivate

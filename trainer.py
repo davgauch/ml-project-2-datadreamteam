@@ -52,9 +52,9 @@ class Trainer:
         self.criterion = QuantileLoss()
 
         # Optimizer and scheduler setup
-        self.optimizer = optim.Adam(self.model.parameters(), lr=learning_rate)
+        self.optimizer = optim.Adam(self.model.parameters(), lr=learning_rate, weight_decay=1e-5)
         self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, 'min', verbose=True)
-        self.early_stopper = EarlyStopper(patience=20, min_delta=0.001)
+        self.early_stopper = EarlyStopper(patience=20, min_decrease=0.005)
         if model_path:
             print(f"Loading model from {model_path}...", flush=True)
             snapshot = torch.load(model_path)
@@ -85,7 +85,7 @@ class Trainer:
             early_stopper_state = snapshot.get("EARLY_STOPPER_STATE", None)
             if early_stopper_state:
                 self.early_stopper.patience = early_stopper_state.get("patience", self.early_stopper.patience)
-                self.early_stopper.min_delta = early_stopper_state.get("min_delta", self.early_stopper.min_delta)
+                self.early_stopper.min_decrease = early_stopper_state.get("min_decrease", self.early_stopper.min_decrease)
                 self.early_stopper.counter = early_stopper_state.get("counter", self.early_stopper.counter)
                 self.early_stopper.min_validation_loss = early_stopper_state.get("min_validation_loss", self.early_stopper.min_validation_loss)
                 self.early_stopper.early_stop = early_stopper_state.get("early_stop", self.early_stopper.early_stop)
@@ -185,7 +185,7 @@ class Trainer:
                     "EPOCHS_RUN": epoch,
                     "EARLY_STOPPER_STATE": {
                         "patience": self.early_stopper.patience,
-                        "min_delta": self.early_stopper.min_delta,
+                        "min_decrease": self.early_stopper.min_decrease,
                         "counter": self.early_stopper.counter,
                         "early_stop": self.early_stopper.early_stop,
                     },

@@ -348,7 +348,6 @@ class Trainer:
                 batch_preds_mc = []
                 for mc_run in range(self.num_monte_carlo):
                     outputs = self.model(img1, img2)
-                    print(outputs)
                     batch_preds_mc.append(outputs.cpu().numpy())
 
                 # Collect MC predictions and true labels
@@ -359,13 +358,6 @@ class Trainer:
                 # Calculate loss using mean prediction
                 pred_mean = np.mean(batch_preds_mc, axis=0)  # Mean over MC samples
                 pred_std = np.std(batch_preds_mc, axis=0)   # Standard deviation over MC samples
-
-                print(f"Sample img1 values (batch {i}): {img1.flatten()[:5].cpu().numpy()}")
-                print(f"Sample img2 values (batch {i}): {img2.flatten()[:5].cpu().numpy()}")
-
-
-                print(f"Predicted mean (batch {i}): {batch_preds_mc.flatten()[:5]}")
-                print(f"Predicted std (batch {i}): {batch_preds_mc.flatten()[:5]}")
 
                 # Confidence Interval
                 z_score = norm.ppf(0.975)  # For 95% confidence

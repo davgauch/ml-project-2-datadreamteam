@@ -62,9 +62,8 @@ def normalize_and_save_in_batches(images_path, ghi_values_path, output_images_pa
         # Normalize using the mean and std computed for this dataset
         batch_images_resized = (batch_images_resized - image_mean) / image_std
 
-        if normalize_labels:
-            # Normalize GHI values (between 0 and 1) using the min/max for this dataset
-            batch_ghi_values = (batch_ghi_values - ghi_min) / (ghi_max - ghi_min)
+        # Normalize GHI values (between 0 and 1) using the min/max for this dataset
+        batch_ghi_values = (batch_ghi_values - ghi_min) / (ghi_max - ghi_min)
 
         # Append the processed batch to the list
         all_images_resized.append(batch_images_resized)
@@ -80,10 +79,12 @@ def normalize_and_save_in_batches(images_path, ghi_values_path, output_images_pa
 
     # Save the processed images and GHI values to .npy files
     np.save(output_images_path, all_images_resized)
-    np.save(output_ghi_values_path, all_ghi_values)
+
+    if normalize_labels:
+        np.save(output_ghi_values_path, all_ghi_values)
+        print(f"Normalized GHI values saved to {output_ghi_values_path}")
 
     print(f"Normalized and resized images saved to {output_images_path}")
-    print(f"Normalized GHI values saved to {output_ghi_values_path}")
     
     return image_mean, image_std, ghi_min, ghi_max
 

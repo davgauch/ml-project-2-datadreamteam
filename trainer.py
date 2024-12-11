@@ -185,6 +185,8 @@ class Trainer:
                 torch.save(snapshot, self.model_snapshot_file)
                 print(f"Epoch {epoch} | Training snapshot saved at {self.model_snapshot_file}")
 
+            print(f"Current early_stopper count: {self.early_stopper.counter}")
+
             if self.early_stopper.early_stop(val_loss):             
                 print("Early stopped training.")
                 break
@@ -195,7 +197,7 @@ class Trainer:
         """
         Performs one epoch of training on the dataset.
         """
-        b_sz = len(next(iter(self.train_loader))[0])
+        b_sz = len(next(iter(self.train_loader))[1])
         print(f"[GPU{self.gpu_id}] Epoch {epoch} | Batchsize: {b_sz} | Steps: {len(self.train_loader)}")
         if torch.cuda.is_available():
             self.train_loader.sampler.set_epoch(epoch)
@@ -326,7 +328,9 @@ class Trainer:
         upper_bounds = []  # Store upper bounds of 95% CI
 
         with torch.no_grad():
+            i = 0
             for (img1, img2), labels in self.test_loader:
+                i += 1
                 # Skip invalid batches (NaN checks, etc.)
                 if torch.isnan(img1).any() or torch.isnan(img2).any() or torch.isnan(labels).any():
                     skipped_batches += 1
@@ -344,6 +348,7 @@ class Trainer:
                 batch_preds_mc = []
                 for mc_run in range(self.num_monte_carlo):
                     outputs = self.model(img1, img2)
+                    print(outputs)
                     batch_preds_mc.append(outputs.cpu().numpy())
 
                 # Collect MC predictions and true labels
@@ -354,6 +359,13 @@ class Trainer:
                 # Calculate loss using mean prediction
                 pred_mean = np.mean(batch_preds_mc, axis=0)  # Mean over MC samples
                 pred_std = np.std(batch_preds_mc, axis=0)   # Standard deviation over MC samples
+
+                print(f"Sample img1 values (batch {i}): {img1.flatten()[:5].cpu().numpy()}")
+                print(f"Sample img2 values (batch {i}): {img2.flatten()[:5].cpu().numpy()}")
+
+
+                print(f"Predicted mean (batch {i}): {batch_preds_mc.flatten()[:5]}")
+                print(f"Predicted std (batch {i}): {batch_preds_mc.flatten()[:5]}")
 
                 # Confidence Interval
                 z_score = norm.ppf(0.975)  # For 95% confidence

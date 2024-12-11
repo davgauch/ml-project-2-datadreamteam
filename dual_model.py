@@ -53,27 +53,14 @@ class DualCNN_LSTM(nn.Module):
 
     def forward(self, x1, x2, return_features=False):
         """
-        x1, x2: Tensors of shape (batch_size, num_images, channels, height, width)
+        x1, x2: Tensors of shape (batch_size, channels, height, width)
         """
-        # Process Webcam 1 input
-        if x1.ndim == 5:
-            current_batch_size, n_img, channels, height, width = x1.size()
-            x1 = x1.view(-1, channels, height, width)
-            x1 = self.cnn1(x1)
-            x1 = x1.view(current_batch_size, n_img, -1)
-        else:
-            current_batch_size = x1.size(0)
-            x1 = self.cnn1(x1)
+   
+        current_batch_size = x1.size(0)
 
-        # Process Webcam 2 input
-        if x2.ndim == 5:
-            current_batch_size, n_img, channels, height, width = x2.size()
-            x2 = x2.view(-1, channels, height, width)
-            x2 = self.cnn2(x2)
-            x2 = x2.view(current_batch_size, n_img, -1)
-        else:
-            current_batch_size = x2.size(0)
-            x2 = self.cnn2(x2)
+        # CNN
+        x1 = self.cnn1(x1)
+        x2 = self.cnn2(x2)
 
         # Combine CNN outputs
         x = torch.cat([x1, x2], dim=-1)
@@ -88,6 +75,6 @@ class DualCNN_LSTM(nn.Module):
 
         # Fully connected layers
         x = F.relu(self.fc1(x[:, -1, :]))  # Only the last timestep
-        x = self.fc2(x)
+        x = F.relu(self.fc2(x))
 
         return x  # (batch_size, 1)

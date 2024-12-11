@@ -4,7 +4,7 @@ import numpy as np
 import torch
 
 from dataset import WebcamDataset
-from model import CNN_LSTM
+from dual_model import DualCNN_LSTM
 from quantile_regression import QuantileRegressionModel
 from trainer import Trainer
 from torch.utils.data import DataLoader
@@ -39,13 +39,13 @@ def main(rank, world_size, epochs, save_every, data_dir, working_dir, batch_size
     print("Loading datasets...", flush=True)
     # Add the "normalized_" prefix if normalized is True
     prefix = "normalized_" if normalized else ""
-    train_dataset = WebcamDataset(images_path=f"{data_dir}/{prefix}X_BC_train.npy", ghi_values_path=f"{data_dir}/{prefix}labels_train.npy", subset=subset)
-    val_dataset = WebcamDataset(images_path=f"{data_dir}/{prefix}X_BC_val.npy", ghi_values_path=f"{data_dir}/{prefix}labels_val.npy", subset=subset)
-    test_dataset = WebcamDataset(images_path=f"{data_dir}/{prefix}X_BC_test.npy", ghi_values_path=f"{data_dir}/{prefix}labels_test.npy", subset=subset)
-    print(prefix)
+    train_dataset = WebcamDataset(images_path_bc=f"{data_dir}/{prefix}X_BC_train.npy", images_path_m=f"{data_dir}/{prefix}X_M_train.npy", ghi_values_path=f"{data_dir}/{prefix}labels_train.npy", subset=subset)
+    val_dataset = WebcamDataset(images_path_bc=f"{data_dir}/{prefix}X_BC_val.npy", images_path_m=f"{data_dir}/{prefix}X_M_val.npy", ghi_values_path=f"{data_dir}/{prefix}labels_val.npy", subset=subset)
+    test_dataset = WebcamDataset(images_path_bc=f"{data_dir}/{prefix}X_BC_test.npy", images_path_m=f"{data_dir}/{prefix}X_M_test.npy", ghi_values_path=f"{data_dir}/{prefix}labels_test.npy", subset=subset)
+    
     print("Creating the model...", flush=True)
     # Instantiate the model
-    model = CNN_LSTM()
+    model = DualCNN_LSTM()
     # Handle Quantile Regression option
     print("Setting up model for Quantile Regression...", flush=True)
     print("Model before quantile regression:", model)

@@ -53,8 +53,8 @@ class Trainer:
 
         # Optimizer and scheduler setup
         self.optimizer = optim.Adam(self.model.parameters(), lr=learning_rate, weight_decay=1e-5)
-        self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, 'min', verbose=True)
-        self.early_stopper = EarlyStopper(patience=20, min_delta=0.01)
+        self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, 'min')
+        self.early_stopper = EarlyStopper(patience=20, min_decrease=0.005)
         if model_path:
             print(f"Loading model from {model_path}...", flush=True)
             snapshot = torch.load(model_path)
@@ -85,7 +85,7 @@ class Trainer:
             early_stopper_state = snapshot.get("EARLY_STOPPER_STATE", None)
             if early_stopper_state:
                 self.early_stopper.patience = early_stopper_state.get("patience", self.early_stopper.patience)
-                self.early_stopper.min_delta = early_stopper_state.get("min_delta", self.early_stopper.min_delta)
+                self.early_stopper.min_decrease = early_stopper_state.get("min_decrease", self.early_stopper.min_decrease)
                 self.early_stopper.counter = early_stopper_state.get("counter", self.early_stopper.counter)
                 self.early_stopper.min_validation_loss = early_stopper_state.get("min_validation_loss", self.early_stopper.min_validation_loss)
                 self.early_stopper.early_stop = early_stopper_state.get("early_stop", self.early_stopper.early_stop)
@@ -185,7 +185,7 @@ class Trainer:
                     "EPOCHS_RUN": epoch,
                     "EARLY_STOPPER_STATE": {
                         "patience": self.early_stopper.patience,
-                        "min_delta": self.early_stopper.min_delta,
+                        "min_decrease": self.early_stopper.min_decrease,
                         "counter": self.early_stopper.counter,
                         "early_stop": self.early_stopper.early_stop,
                     },
@@ -200,8 +200,8 @@ class Trainer:
         print("Training complete. Losses and batch info saved to:", self.train_loss_file)
 
     def train_one_epoch(self, epoch):
-        """Performs one epoch of training."""
-        b_sz = len(next(iter(self.train_loader))[0])
+        """Performs one epoch of training for paired image data."""
+        b_sz = len(next(iter(self.train_loader))[0][0])  # Assuming train_loader yields a tuple of ((img1, img2), labels)
         print(f"[GPU{self.gpu_id}] Epoch {epoch} | Batchsize: {b_sz} | Steps: {len(self.train_loader)}")
         
         if torch.cuda.is_available():
@@ -213,27 +213,30 @@ class Trainer:
         processed_batches = 0
         skipped_batches = 0
 
-        for inputs, labels in self.train_loader:
-            if torch.isnan(inputs).any() or torch.isnan(labels).any():
+        for (img1, img2), labels in self.train_loader:
+            # Check for NaN values
+            if torch.isnan(img1).any() or torch.isnan(img2).any() or torch.isnan(labels).any():
                 skipped_batches += 1
                 print("Warning: Skipping batch due to NaN values.")
                 continue
-                
+
             labels = self._expand_labels_for_quantiles(labels, len(self.criterion.quantiles))
 
-            if torch.cuda.is_available():
-                inputs, labels = inputs.to(self.gpu_id).float(), labels.to(self.gpu_id).float()
-            else:
-                inputs, labels = inputs.to("cpu").float(), labels.to("cpu").float()
+            # Move data to the appropriate device
+            device = self.gpu_id if torch.cuda.is_available() else "cpu"
+            img1, img2, labels = img1.to(device).float(), img2.to(device).float(), labels.to(device).float()
 
             self.optimizer.zero_grad()
-            outputs = self.model(inputs)
             
+            # Forward pass through the model with both images
+            outputs = self.model(img1, img2) 
+
             if torch.isnan(outputs).any():
                 skipped_batches += 1
                 print("Warning: Skipping batch due to NaN in outputs.")
                 continue
 
+            # Calculate loss and backpropagate
             loss = self.criterion(outputs, labels)
             loss.backward()
             self.optimizer.step()
@@ -255,9 +258,9 @@ class Trainer:
         skipped_batches = 0
     
         with torch.no_grad():
-            for inputs, labels in self.val_loader:
+            for (img1, img2), labels in self.val_loader:
                 # Skip invalid batches (NaN checks, etc.)
-                if torch.isnan(inputs).any() or torch.isnan(labels).any():
+                if torch.isnan(img1).any() or torch.isnan(img2).any() or torch.isnan(labels).any():
                     skipped_batches += 1
                     print("Warning: Skipping batch due to NaN values.")
                     continue
@@ -266,13 +269,11 @@ class Trainer:
                 labels = self._expand_labels_for_quantiles(labels, len(self.criterion.quantiles))
     
                 # Move inputs and labels to the device (GPU/CPU)
-                if torch.cuda.is_available():
-                    inputs, labels = inputs.to(self.gpu_id).float(), labels.to(self.gpu_id).float()
-                else:
-                    inputs, labels = inputs.to("cpu").float(), labels.to("cpu").float()
-    
+                device = self.gpu_id if torch.cuda.is_available() else "cpu"
+                img1, img2, labels = img1.to(device).float(), img2.to(device).float(), labels.to(device).float()
+        
                 # Get model outputs
-                outputs = self.model(inputs)
+                outputs = self.model(img1, img2)
             
                 # Compute loss
                 loss = self.criterion(outputs, labels)
@@ -299,9 +300,9 @@ class Trainer:
         true_labels = []     # Collect true labels (original, not expanded)
 
         with torch.no_grad():
-            for inputs, labels in self.test_loader:
+            for (img1, img2), labels in self.test_loader:
                 # Skip invalid batches (NaN checks, etc.)
-                if torch.isnan(inputs).any() or torch.isnan(labels).any():
+                if torch.isnan(img1).any() or torch.isnan(img2).any() or torch.isnan(labels).any():
                     skipped_batches += 1
                     print("Warning: Skipping batch due to NaN values.")
                     continue
@@ -314,17 +315,15 @@ class Trainer:
                 labels = self._expand_labels_for_quantiles(labels, len(self.criterion.quantiles))
 
                 # Move inputs and labels to the device (GPU/CPU)
-                if torch.cuda.is_available():
-                    inputs, labels = inputs.to(self.gpu_id).float(), labels.to(self.gpu_id).float()
-                else:
-                    inputs, labels = inputs.to("cpu").float(), labels.to("cpu").float()
+                device = self.gpu_id if torch.cuda.is_available() else "cpu"
+                img1, img2, labels = img1.to(device).float(), img2.to(device).float(), labels.to(device).float()
 
                 # Predict intervals using the quantile regression model
-                lower_bound, mean, upper_bound = predict_intervals(self.model, inputs)
+                lower_bound, mean, upper_bound = predict_intervals(self.model, img1, img2)
                 pred_intervals.append((lower_bound.cpu().numpy(), mean.cpu().numpy(), upper_bound.cpu().numpy()))
 
                 # Compute loss
-                outputs = self.model(inputs)
+                outputs = self.model(img1, img2)
                 
                 loss = self.criterion(outputs, labels)
                 running_loss += loss.item()

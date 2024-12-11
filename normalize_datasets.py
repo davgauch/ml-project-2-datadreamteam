@@ -1,12 +1,25 @@
 import numpy as np
 import cv2  # OpenCV for resizing
 
-def normalize_and_save_in_batches(images_path, ghi_values_path, output_images_path, output_ghi_values_path, batch_size=32, new_size=(224, 224), image_mean=None, image_std=None, ghi_min=None, ghi_max=None):
+def normalize_and_save_in_batches(images_path, ghi_values_path, output_images_path, output_ghi_values_path, batch_size=32, new_size=(224, 224), image_mean=None, image_std=None, ghi_min=None, ghi_max=None, normalize_labels=True):
     """
     Normalize images and GHI values in batches, resize images to new dimensions, and save them to .npy files.
     
     Args:
-        Same as previous function, but saves to .npy files instead of HDF5, and processes in batches.
+        images_path (str): Path to input images (numpy .npy file).
+        ghi_values_path (str): Path to GHI values (numpy .npy file).
+        output_images_path (str): Path to save normalized images.
+        output_ghi_values_path (str): Path to save normalized GHI values.
+        batch_size (int): Number of samples to process in each batch.
+        new_size (tuple): Target size for resizing images.
+        image_mean (array-like): Mean for image normalization (optional).
+        image_std (array-like): Standard deviation for image normalization (optional).
+        ghi_min (float): Minimum GHI value for normalization (optional).
+        ghi_max (float): Maximum GHI value for normalization (optional).
+        normalize_labels (bool): Whether to normalize GHI values (default: True).
+    
+    Returns:
+        tuple: Computed or provided (image_mean, image_std, ghi_min, ghi_max).
     """
     # Load the raw images and GHI values
     images = np.load(images_path, mmap_mode='r')  # Shape: (num_samples, height, width, channels)
@@ -66,15 +79,17 @@ def normalize_and_save_in_batches(images_path, ghi_values_path, output_images_pa
 
     # Save the processed images and GHI values to .npy files
     np.save(output_images_path, all_images_resized)
-    np.save(output_ghi_values_path, all_ghi_values)
+
+    if normalize_labels:
+        np.save(output_ghi_values_path, all_ghi_values)
+        print(f"Normalized GHI values saved to {output_ghi_values_path}")
 
     print(f"Normalized and resized images saved to {output_images_path}")
-    print(f"Normalized GHI values saved to {output_ghi_values_path}")
     
     return image_mean, image_std, ghi_min, ghi_max
 
 
-def preprocess_and_save(training_images_path, training_ghi_values_path, validation_images_path, validation_ghi_values_path, test_images_path, test_ghi_values_path, output_images_path, output_ghi_values_path, batch_size=32, new_size=(224, 224)):
+def preprocess_and_save(training_images_path, training_ghi_values_path, validation_images_path, validation_ghi_values_path, test_images_path, test_ghi_values_path, output_images_path, output_ghi_values_path, batch_size=32, new_size=(224, 224), normalize_labels=True):
     """
     Preprocess and save training, validation, and test data to .npy files.
     
@@ -85,7 +100,7 @@ def preprocess_and_save(training_images_path, training_ghi_values_path, validati
     print("Processing training data...")
     image_mean, image_std, ghi_min, ghi_max = normalize_and_save_in_batches(
         training_images_path, training_ghi_values_path, f"{output_images_path}_train.npy", f"{output_ghi_values_path}_train.npy",
-        batch_size=batch_size, new_size=new_size
+        batch_size=batch_size, new_size=new_size, normalize_labels=normalize_labels
     )
 
     print(f"Image mean: {image_mean}")
@@ -97,31 +112,31 @@ def preprocess_and_save(training_images_path, training_ghi_values_path, validati
     print("Processing validation data...")
     normalize_and_save_in_batches(
         validation_images_path, validation_ghi_values_path, f"{output_images_path}_val.npy", f"{output_ghi_values_path}_val.npy",
-        batch_size=batch_size, new_size=new_size, image_mean=image_mean, image_std=image_std, ghi_min=ghi_min, ghi_max=ghi_max
+        batch_size=batch_size, new_size=new_size, image_mean=image_mean, image_std=image_std, ghi_min=ghi_min, ghi_max=ghi_max, normalize_labels=normalize_labels
     )
 
     # Preprocess and save test data (using stats from training set)
     print("Processing test data...")
     normalize_and_save_in_batches(
         test_images_path, test_ghi_values_path, f"{output_images_path}_test.npy", f"{output_ghi_values_path}_test.npy",
-        batch_size=batch_size, new_size=new_size, image_mean=image_mean, image_std=image_std, ghi_min=ghi_min, ghi_max=ghi_max
+        batch_size=batch_size, new_size=new_size, image_mean=image_mean, image_std=image_std, ghi_min=ghi_min, ghi_max=ghi_max, normalize_labels=normalize_labels
     )
 
 
 if __name__ == "__main__":
     # Define paths for training, validation, and test sets
-    training_images_path = "./data/X_BC_train.npy"  # Path to training images
+    training_images_path = "./data/X_M_train.npy"  # Path to training images
     training_ghi_values_path = "./data/labels_train.npy"  # Path to training GHI values
-    validation_images_path = "./data/X_BC_val.npy"  # Path to validation images
+    validation_images_path = "./data/X_M_val.npy"  # Path to validation images
     validation_ghi_values_path = "./data/labels_val.npy"  # Path to validation GHI values
-    test_images_path = "./data/X_BC_test.npy"  # Path to test images
+    test_images_path = "./data/X_M_test.npy"  # Path to test images
     test_ghi_values_path = "./data/labels_test.npy"  # Path to test GHI values
     
-    output_images_path = "./data/normalized_X_BC"  # Base path for saving normalized images (all sets)
+    output_images_path = "./data/normalized_X_M"  # Base path for saving normalized images (all sets)
     output_ghi_values_path = "./data/normalized_labels"  # Base path for saving normalized GHI values (all sets)
 
     # Preprocess and save all datasets (training, validation, test)
     preprocess_and_save(
         training_images_path, training_ghi_values_path, validation_images_path, validation_ghi_values_path, 
-        test_images_path, test_ghi_values_path, output_images_path, output_ghi_values_path, batch_size=32, new_size=(224, 224)
+        test_images_path, test_ghi_values_path, output_images_path, output_ghi_values_path, batch_size=32, new_size=(224, 224), normalize_labels=False
     )

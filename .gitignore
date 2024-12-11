@@ -3,15 +3,5 @@
 /output
 /.venv
 /.ipynb_checkpoints
-results/100epoch_10samples/job_error.log
-results/100epoch_10samples/job_output.log
-results/100epoch_10samples/model.pt
-results/100epoch_10samples/train_losses.csv
-results/60epochs_5samples/job_error.log
-results/60epochs_5samples/job_output.log
-results/60epochs_5samples/model.pt
-results/60epochs_5samples/train_losses.csv
-results/80epochs_5samples/job_error.log
-results/80epochs_5samples/job_output.log
-results/80epochs_5samples/model.pt
-results/80epochs_5samples/train_losses.csv
+/bayesian*
+/results/*

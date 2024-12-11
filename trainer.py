@@ -244,7 +244,7 @@ class Trainer:
 
             # Compute the loss
             criterion_loss = self.criterion(output, labels)
-            kl_div = kl / b_sz  # Normalize KL divergence by batch size
+            kl_div = kl / img1.size(0)  # Normalize KL divergence by batch size
             loss = criterion_loss + kl_div
 
             # Backward pass and optimize

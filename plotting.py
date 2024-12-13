@@ -34,12 +34,6 @@ def plot_predictions_bnn(
     lower_bounds = np.load(lower_bounds_file)  # Shape: (total_samples, output_dim)
     upper_bounds = np.load(upper_bounds_file)  # Shape: (total_samples, output_dim)
 
-    print("Shapes before processing:")
-    print(f"pred_probs_mc: {pred_probs_mc.shape}")  # (num_monte_carlo, total_samples, output_dim)
-    print(f"true_labels: {true_labels.shape}")
-    print(f"lower_bounds: {lower_bounds.shape}")
-    print(f"upper_bounds: {upper_bounds.shape}")
-
     # Compute mean prediction across MC samples
     pred_mean = np.mean(pred_probs_mc, axis=0)  # Shape: (total_samples, output_dim)
 
@@ -65,14 +59,6 @@ def plot_predictions_bnn(
         lower_bounds = lower_bounds[start_index:end_index]
         upper_bounds = upper_bounds[start_index:end_index]
         pred_probs_mc = pred_probs_mc[:, start_index:end_index]
-
-    # Debugging shapes after slicing
-    print("Shapes after processing:")
-    print(f"pred_probs_mc: {pred_probs_mc.shape}")
-    print(f"true_labels: {true_labels.shape}")
-    print(f"pred_mean: {pred_mean.shape}")
-    print(f"lower_bounds: {lower_bounds.shape}")
-    print(f"upper_bounds: {upper_bounds.shape}")
 
     # Plot
     plt.figure(figsize=(12, 6))
@@ -118,10 +104,10 @@ def plot_predictions_bnn(
 
 # Call the function
 plot_predictions_bnn(
-    preds_file="./bayesianV6Test50/preds.npy",
-    true_labels_file="./bayesianV6Test50/true_labels.npy",
-    lower_bounds_file="./bayesianV6Test50/pred_lower_bounds.npy",
-    upper_bounds_file="./bayesianV6Test50/pred_upper_bounds.npy",
-    plot_save_path="bayesianV6Test50_with_mc_samples_fixed.png",
-    num_labels=100
+    preds_file="./bayesianV8Test5/preds.npy",
+    true_labels_file="./bayesianV8Test5/true_labels.npy",
+    lower_bounds_file="./bayesianV8Test5/pred_lower_bounds.npy",
+    upper_bounds_file="./bayesianV8Test5/pred_upper_bounds.npy",
+    plot_save_path="bayesianV8Test5.png",
+    num_labels=300
 )

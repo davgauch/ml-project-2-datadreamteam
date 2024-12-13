@@ -1,6 +1,5 @@
 import pandas as pd
 import numpy as np 
-
 import torch
 
 from dataset import WebcamDataset
@@ -32,21 +31,52 @@ def ddp_setup(rank: int, world_size: int):
    
 
 def main(rank, world_size, epochs, save_every, data_dir, working_dir, batch_size, normalized, skip_training, model_path, subset):
-    print("Setuping DDP...", flush=True)
+    print("Setting up DDP...", flush=True)
     if world_size > 1:
         ddp_setup(rank=rank, world_size=world_size)
 
     print("Loading datasets...", flush=True)
     # Add the "normalized_" prefix if normalized is True
     prefix = "normalized_" if normalized else ""
-    train_dataset = WebcamDataset(images_path_bc=f"{data_dir}/{prefix}X_BC_train.npy", images_path_m=f"{data_dir}/{prefix}X_M_train.npy", ghi_values_path=f"{data_dir}/{prefix}labels_train.npy", subset=subset)
-    val_dataset = WebcamDataset(images_path_bc=f"{data_dir}/{prefix}X_BC_val.npy", images_path_m=f"{data_dir}/{prefix}X_M_val.npy", ghi_values_path=f"{data_dir}/{prefix}labels_val.npy", subset=subset)
-    test_dataset = WebcamDataset(images_path_bc=f"{data_dir}/{prefix}X_BC_test.npy", images_path_m=f"{data_dir}/{prefix}X_M_test.npy", ghi_values_path=f"{data_dir}/{prefix}labels_test.npy", subset=subset)
+
+    # Chosen meteo features:
+    # AirTemp (0), CloudOpacity (1), PrecipitableWater (9), RelativeHumidity (10), Zenith (15)
+    # Based on the assumed order from the original full list:
+    # ["AirTemp"(0), "Azimuth"(1), "CloudOpacity"(2), "DewpointTemp"(3), "Dhi"(4), 
+    #  "Dni"(5), "Ebh"(6), "GtiFixedTilt"(7), "GtiTracking"(8), "PrecipitableWater"(9), 
+    #  "RelativeHumidity"(10), "SnowWater"(11), "SurfacePressure"(12), "WindDirection10m"(13), 
+    #  "WindSpeed10m"(14), "Zenith"(15), "AlbedoDaily"(16)]
+    meteo_feature_indices = [0, 1, 9, 10, 15]
+
+    train_dataset = WebcamDataset(
+        images_path_bc=f"{data_dir}/{prefix}X_BC_train.npy",
+        images_path_m=f"{data_dir}/{prefix}X_M_train.npy",
+        ghi_values_path=f"{data_dir}/{prefix}labels_train.npy",
+        meteo_file_path=f"{data_dir}/{prefix}meteo_train.npy",
+        meteo_features=meteo_feature_indices,
+        subset=subset
+    )
+    val_dataset = WebcamDataset(
+        images_path_bc=f"{data_dir}/{prefix}X_BC_val.npy",
+        images_path_m=f"{data_dir}/{prefix}X_M_val.npy",
+        ghi_values_path=f"{data_dir}/{prefix}labels_val.npy",
+        meteo_file_path=f"{data_dir}/{prefix}meteo_val.npy",
+        meteo_features=meteo_feature_indices,
+        subset=subset
+    )
+    test_dataset = WebcamDataset(
+        images_path_bc=f"{data_dir}/{prefix}X_BC_test.npy",
+        images_path_m=f"{data_dir}/{prefix}X_M_test.npy",
+        ghi_values_path=f"{data_dir}/{prefix}labels_test.npy",
+        meteo_file_path=f"{data_dir}/{prefix}meteo_test.npy",
+        meteo_features=meteo_feature_indices,
+        subset=subset
+    )
+    
     
     print("Creating the model...", flush=True)
     # Instantiate the model
-    model = DualCNN_LSTM()
-    # Handle Quantile Regression option
+    model = DualCNN_LSTM(num_meteo_features=len(meteo_feature_indices))
     print("Setting up model for Quantile Regression...", flush=True)
     print("Model before quantile regression:", model)
     model = QuantileRegressionModel(model)  
@@ -62,10 +92,10 @@ def main(rank, world_size, epochs, save_every, data_dir, working_dir, batch_size
     trainer = Trainer(model, train_dataset, val_dataset, test_dataset, gpu_id=rank, batch_size=batch_size, epochs=epochs, working_dir=working_dir, model_path=model_path)
 
     if not skip_training:        
-        print(f"Training the model...", flush=True)
+        print("Training the model...", flush=True)
         trainer.train()
         
-    print(f"Testing the model...", flush=True)
+    print("Testing the model...", flush=True)
     trainer.test()
 
     if world_size > 1:
@@ -83,7 +113,6 @@ if __name__ == "__main__":
     parser.add_argument('--skip_training', default=False, help='Boolean to run the model in testing mode')
     parser.add_argument('--model_path', default=None, type=str, help='Path to the saved model (.pt) for testing or resuming training')
     parser.add_argument('--subset', default=None, type=int, help='The size of the subset. None if full dataset')
-
 
     args = parser.parse_args()
 

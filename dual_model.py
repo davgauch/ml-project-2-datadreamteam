@@ -4,7 +4,17 @@ import torch.nn.functional as F
 
 
 class DualCNN_LSTM(nn.Module):
-    def __init__(self,input_shape=(32,6,224,224),out_channels=1): #input_shape =(32,6,224,224), -> six because 2 images
+    def __init__(self,input_shape=(32,6,224,224),out_channels=1, num_meteo_features=5): #input_shape =(32,6,224,224), -> six because 2 images
+        """
+        Args:
+            input_shape: Shape of the input batch used to infer CNN output size. 
+                         Default=(32,6,224,224) means: 
+                         batch_size=32, channels=6 (because 2 RGB images = 3*2=6),
+                         height=224, width=224.
+            out_channels: Number of output channels, e.g. for quantile regression, 
+                          this might be number of quantiles.
+            num_meteo_features: Number of meteorological features to be incorporated.
+        """
         super().__init__()
         self.batch_size, self.channels = input_shape[0],input_shape[-3]
         # CNN layers
@@ -29,8 +39,15 @@ class DualCNN_LSTM(nn.Module):
             cnn_out = self.cnn_forward(dummy_input)  # a method that replicates the CNN part of the full forward
             self.flatten_size = cnn_out.view(self.batch_size, -1).size(1)
 
+        # MLP for Meteo Data
+        # Process the meteo features before concatenation
+        self.meteo_fc1 = nn.Linear(num_meteo_features, 32)
+        self.meteo_fc2 = nn.Linear(32, 32)
+        self.meteo_dropout = nn.Dropout(0.1)
+
         # LSTM layers
-        self.lstm1 = nn.LSTM(self.flatten_size, 128, batch_first=True)
+        # Input to LSTM is flattened_size from CNN + 32 from meteo
+        self.lstm1 = nn.LSTM(self.flatten_size + 32, 128, batch_first=True)
         self.lstm2 = nn.LSTM(128, 64, batch_first=True)
     
         # Dense layers
@@ -54,41 +71,52 @@ class DualCNN_LSTM(nn.Module):
         x = self.dropout2(x)
         return x
 
-    def forward(self, img1, img2, return_features=False):
+    def forward(self, img1, img2, meteo_data=None, return_features=False):
         """
-        Forward pass for two separate images with channel concatenation.
+        Forward pass for two separate images with optional meteo data.
         Args:
-            img1: Tensor of shape (batch_size, channels, height, width) for the first image.
-            img2: Tensor of shape (batch_size, channels, height, width) for the second image.
-            return_features: If True, return CNN features instead of final output.
+            img1 (torch.Tensor): (batch_size, channels, H, W)
+            img2 (torch.Tensor): (batch_size, channels, H, W)
+            meteo_data (torch.Tensor): (batch_size, num_meteo_features) or None
+            return_features (bool): If True, return CNN features only.
+
         Returns:
-            Output tensor of shape (batch_size, out_channels).
+            torch.Tensor: Output of shape (batch_size, out_channels).
         """
         # Ensure the images have the same spatial dimensions
         if img1.size() != img2.size():
             raise ValueError("img1 and img2 must have the same shape")
         
-        # Concatenate the channels of both images
-        merged_images = torch.cat((img1, img2), dim=1)  # Shape: (batch_size, channels*2, height, width)
+        # Concatenate channels of both images: shape (B, C*2, H, W)
+        merged_images = torch.cat((img1, img2), dim=1)
         
-        # Pass the concatenated images through the CNN
-        cnn_out = self.cnn_forward(merged_images)  # Shape: (batch_size, cnn_features, reduced_height, reduced_width)
-        
-        # Flatten the CNN output
-        cnn_out = cnn_out.view(cnn_out.size(0), -1)  # Shape: (batch_size, flattened_size)
-        
+        # CNN forward
+        cnn_out = self.cnn_forward(merged_images)  # (B, features, h', w')
+        cnn_out = cnn_out.view(cnn_out.size(0), -1)  # Flatten: (B, flattened_size)
+
         if return_features:
-            return cnn_out  # Return the features if requested
+            return cnn_out
 
-        # Add a sequence dimension for the LSTM
-        lstm_in = cnn_out.unsqueeze(1)  # Shape: (batch_size, seq_len=1, feature_dim)
+        # Process meteo features if provided
+        if meteo_data is not None and meteo_data.nelement() > 0:
+            # Pass through small MLP
+            m = F.relu(self.meteo_fc1(meteo_data))
+            m = self.meteo_dropout(m)
+            m = F.relu(self.meteo_fc2(m))
+            # Concatenate CNN and Meteo features
+            combined_input = torch.cat((cnn_out, m), dim=1)
+        else:
+            combined_input = cnn_out
 
-        # Pass through LSTM layers
-        lstm_out, _ = self.lstm1(lstm_in)  # Shape: (batch_size, seq_len, 128)
-        lstm_out, _ = self.lstm2(lstm_out)  # Shape: (batch_size, seq_len, 64)
+        # Add a sequence dimension for LSTM
+        lstm_in = combined_input.unsqueeze(1)  # (B, 1, feature_dim)
 
-        # Use the last time step for classification
-        x = F.relu(self.fc1(lstm_out[:, -1, :]))  # Shape: (batch_size, 64)
-        x = F.relu(self.fc2(x))  # Shape: (batch_size, out_channels)
+        # LSTM forward
+        lstm_out, _ = self.lstm1(lstm_in)
+        lstm_out, _ = self.lstm2(lstm_out)
+
+        # Fully-connected layers
+        x = F.relu(self.fc1(lstm_out[:, -1, :]))
+        x = self.fc2(x)
 
         return x

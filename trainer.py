@@ -213,30 +213,28 @@ class Trainer:
         processed_batches = 0
         skipped_batches = 0
 
-        for (img1, img2), labels in self.train_loader:
-            # Check for NaN values
-            if torch.isnan(img1).any() or torch.isnan(img2).any() or torch.isnan(labels).any():
+        for (img1, img2, meteo_data), labels in self.train_loader:
+            # NaN checks
+            if torch.isnan(img1).any() or torch.isnan(img2).any() or torch.isnan(meteo_data).any() or torch.isnan(labels).any():
                 skipped_batches += 1
                 print("Warning: Skipping batch due to NaN values.")
                 continue
 
             labels = self._expand_labels_for_quantiles(labels, len(self.criterion.quantiles))
 
-            # Move data to the appropriate device
             device = self.gpu_id if torch.cuda.is_available() else "cpu"
-            img1, img2, labels = img1.to(device).float(), img2.to(device).float(), labels.to(device).float()
+            img1, img2, meteo_data, labels = img1.to(device).float(), img2.to(device).float(), meteo_data.to(device).float(), labels.to(device).float()
 
             self.optimizer.zero_grad()
-            
-            # Forward pass through the model with both images
-            outputs = self.model(img1, img2) 
+
+            # Forward pass with meteo_data
+            outputs = self.model(img1, img2, meteo_data=meteo_data)
 
             if torch.isnan(outputs).any():
                 skipped_batches += 1
                 print("Warning: Skipping batch due to NaN in outputs.")
                 continue
 
-            # Calculate loss and backpropagate
             loss = self.criterion(outputs, labels)
             loss.backward()
             self.optimizer.step()
@@ -258,28 +256,22 @@ class Trainer:
         skipped_batches = 0
     
         with torch.no_grad():
-            for (img1, img2), labels in self.val_loader:
-                # Skip invalid batches (NaN checks, etc.)
-                if torch.isnan(img1).any() or torch.isnan(img2).any() or torch.isnan(labels).any():
+            for (img1, img2, meteo_data), labels in self.val_loader:
+                if torch.isnan(img1).any() or torch.isnan(img2).any() or torch.isnan(meteo_data).any() or torch.isnan(labels).any():
                     skipped_batches += 1
                     print("Warning: Skipping batch due to NaN values.")
                     continue
-    
-                # Expand labels for quantiles
+
                 labels = self._expand_labels_for_quantiles(labels, len(self.criterion.quantiles))
-    
-                # Move inputs and labels to the device (GPU/CPU)
                 device = self.gpu_id if torch.cuda.is_available() else "cpu"
-                img1, img2, labels = img1.to(device).float(), img2.to(device).float(), labels.to(device).float()
-        
-                # Get model outputs
-                outputs = self.model(img1, img2)
-            
-                # Compute loss
+                img1, img2, meteo_data, labels = img1.to(device).float(), img2.to(device).float(), meteo_data.to(device).float(), labels.to(device).float()
+
+                outputs = self.model(img1, img2, meteo_data=meteo_data)
                 loss = self.criterion(outputs, labels)
+
                 running_loss += loss.item()
                 processed_batches += 1
-    
+
         avg_loss = running_loss / max(1, processed_batches)
     
         return avg_loss, processed_batches, skipped_batches
@@ -300,34 +292,39 @@ class Trainer:
         true_labels = []     # Collect true labels (original, not expanded)
 
         with torch.no_grad():
-            for (img1, img2), labels in self.test_loader:
-                # Skip invalid batches (NaN checks, etc.)
-                if torch.isnan(img1).any() or torch.isnan(img2).any() or torch.isnan(labels).any():
+            for (img1, img2, meteo_data), labels in self.test_loader:
+                if torch.isnan(img1).any() or torch.isnan(img2).any() or torch.isnan(meteo_data).any() or torch.isnan(labels).any():
                     skipped_batches += 1
                     print("Warning: Skipping batch due to NaN values.")
                     continue
 
-                # Save the original labels before expansion
                 original_labels = labels.cpu().numpy()
                 true_labels.append(original_labels)
 
-                # Expand labels for quantiles
                 labels = self._expand_labels_for_quantiles(labels, len(self.criterion.quantiles))
-
-                # Move inputs and labels to the device (GPU/CPU)
                 device = self.gpu_id if torch.cuda.is_available() else "cpu"
-                img1, img2, labels = img1.to(device).float(), img2.to(device).float(), labels.to(device).float()
+                img1, img2, meteo_data, labels = img1.to(device).float(), img2.to(device).float(), meteo_data.to(device).float(), labels.to(device).float()
 
-                # Predict intervals using the quantile regression model
-                lower_bound, mean, upper_bound = predict_intervals(self.model, img1, img2)
+                # Use predict_intervals and model call with meteo_data
+                lower_bound, mean, upper_bound = predict_intervals(self.model, img1, img2, meteo_data=meteo_data)
                 pred_intervals.append((lower_bound.cpu().numpy(), mean.cpu().numpy(), upper_bound.cpu().numpy()))
 
-                # Compute loss
-                outputs = self.model(img1, img2)
-                
+                outputs = self.model(img1, img2, meteo_data=meteo_data)
                 loss = self.criterion(outputs, labels)
                 running_loss += loss.item()
                 processed_batches += 1
+
+        # If no intervals were collected, avoid concatenation error
+        if len(pred_intervals) == 0:
+            print("No valid predictions were made (all batches skipped?).")
+            avg_loss = 0.0
+            test_time = time.time() - start_test_time
+            if self.test_loss_file:
+                with open(self.test_loss_file, mode='w', newline='') as file:
+                    writer = csv.writer(file)
+                    writer.writerow(['Error', 'Processed Val Batches', 'Skipped Val Batches', 'Testing Time (s)'])
+                    writer.writerow([avg_loss, processed_batches, skipped_batches, test_time])
+            return avg_loss, processed_batches, skipped_batches
 
         # Post-processing
         lower_bounds = np.concatenate([pi[0] for pi in pred_intervals], axis=0)

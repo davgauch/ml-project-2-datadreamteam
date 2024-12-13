@@ -23,26 +23,22 @@ class WebcamDataset(Dataset):
         self.images_bc = np.load(images_path_bc, mmap_mode='r')
         self.images_m = np.load(images_path_m, mmap_mode='r')
         self.ghi_values = np.load(ghi_values_path)
-        self.transform = transform
-        if meteo_file_path is not None and meteo_features is not None:
-                raw_meteo_data = np.load(meteo_file_path)
-                # At this point, raw_meteo_data should be numeric and not contain index or Time columns,
-                # since we processed them out in `preprocess_and_save` when normalizing.
-
-                self.meteo_data = raw_meteo_data[:, meteo_features]
-
+        if meteo_file_path is not None:
+            meteo_data = np.load(meteo_file_path)
+            self.meteo_features = meteo_data[meteo_features]
 
         # Remove rows where any NaN values are present in the images or ghi_values
         # valid_indices = ~np.isnan(self.ghi_values) & ~np.isnan(self.images).any(axis=(1, 2, 3))
         # self.images = self.images[valid_indices]
         # self.ghi_values = self.ghi_values[valid_indices]
 
-        if subset is not None and subset < len(self.images_bc):
+        # Perform random subsampling if subset is specified
+        if subset:
             self.images_bc = self.images_bc[:subset]
             self.images_m = self.images_m[:subset]
             self.ghi_values = self.ghi_values[:subset]
-            if self.meteo_data is not None:
-                self.meteo_data = self.meteo_data[:subset]
+            if meteo_file_path is not None:
+                self.meteo_features = self.meteo_features[:subset]
 
         # Compute normalization parameters for images
         # self.image_mean = self.images.mean(axis=(0, 1, 2)) / 255.0  # Normalize by 255
@@ -52,6 +48,17 @@ class WebcamDataset(Dataset):
         # self.normalize_labels = normalize_labels
         # if normalize_labels:
         #     self.ghi_min = self.ghi_values.min()
+        #     self.ghi_max = self.ghi_values.max()
+        #     self.ghi_values = (self.ghi_values - self.ghi_min) / (self.ghi_max - self.ghi_min)
+
+        self.transform = transform
+
+    def __len__(self):
+        """
+        Returns the number of samples in the dataset.
+        """
+        return self.ghi_values.shape[0]
+
     def __getitem__(self, idx):
         """
         Fetches the image and corresponding GHI value at the specified index.
@@ -79,26 +86,9 @@ class WebcamDataset(Dataset):
 
         ghi_value = torch.tensor(ghi_value, dtype=torch.float32).unsqueeze(0)
 
-        # Fetch meteo features if available
-        if self.meteo_data is not None:
-            meteo_sample = self.meteo_data[idx]  # shape: (F,)
-            meteo_sample = torch.tensor(meteo_sample, dtype=torch.float32)
-        else:
-            # Return an empty tensor if no meteo data
-            meteo_sample = torch.tensor([], dtype=torch.float32)
-
         if self.transform:
             image_bc = self.transform(image_bc)
             image_m = self.transform(image_m)
 
 
-        return (image_bc, image_m, meteo_sample), ghi_value
-
-    def __len__(self):
-        """
-        Returns the total number of samples in the dataset.
-
-        Returns:
-            int: The number of samples in the dataset.
-        """
-        return len(self.images_bc)
+        return (image_bc, image_m), ghi_value  # Return the images and its corresponding GHI value

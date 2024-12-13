@@ -5,3 +5,12 @@
 /.ipynb_checkpoints
 /bayesian*
 /results/*
+temp_cleaned_data/test_images.npy
+temp_cleaned_data/test_meteo.npy
+temp_cleaned_data/train_ghi.npy
+temp_cleaned_data/train_images.npy
+temp_cleaned_data/train_meteo.npy
+temp_cleaned_data/val_ghi.npy
+temp_cleaned_data/val_images.npy
+temp_cleaned_data/val_meteo.npy
+temp_cleaned_data/test_ghi.npy

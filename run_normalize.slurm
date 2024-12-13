@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --chdir=/scratch/izar/fcomte
+#SBATCH --chdir=/scratch/izar/odefranc
 
 #SBATCH --account=cs433
 #SBATCH --qos=cs433
@@ -14,9 +14,9 @@
 
 #SBATCH --mem-per-gpu 64G
 
-#SBATCH --output=./normalizationM/job_output.log
-#SBATCH --error=./normalizationM/job_error.log
-#SBATCH --job-name=normalizatioM
+#SBATCH --output=./normalization/job_output.log
+#SBATCH --error=./normalization/job_error.log
+#SBATCH --job-name=normalization
 
 module load gcc cuda python
 source ./venvs/pytorch-env/bin/activate

@@ -40,13 +40,13 @@ def main(rank, world_size, epochs, save_every, data_dir, working_dir, batch_size
     prefix = "normalized_" if normalized else ""
 
     # Chosen meteo features:
-    # AirTemp (0), CloudOpacity (1), PrecipitableWater (9), RelativeHumidity (10), Zenith (15)
+    # AirTemp (0), CloudOpacity (2), PrecipitableWater (9), RelativeHumidity (10), Zenith (15)
     # Based on the assumed order from the original full list:
     # ["AirTemp"(0), "Azimuth"(1), "CloudOpacity"(2), "DewpointTemp"(3), "Dhi"(4), 
     #  "Dni"(5), "Ebh"(6), "GtiFixedTilt"(7), "GtiTracking"(8), "PrecipitableWater"(9), 
     #  "RelativeHumidity"(10), "SnowWater"(11), "SurfacePressure"(12), "WindDirection10m"(13), 
     #  "WindSpeed10m"(14), "Zenith"(15), "AlbedoDaily"(16)]
-    meteo_feature_indices = [0, 1, 9, 10, 15]
+    meteo_feature_indices = [0, 2, 9, 10, 15]
 
     train_dataset = WebcamDataset(
         images_path_bc=f"{data_dir}/{prefix}X_BC_train.npy",

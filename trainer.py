@@ -54,7 +54,7 @@ class Trainer:
         # Optimizer and scheduler setup
         self.optimizer = optim.Adam(self.model.parameters(), lr=learning_rate, weight_decay=1e-5)
         self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, 'min')
-        self.early_stopper = EarlyStopper(patience=20, min_decrease=0.005)
+        self.early_stopper = EarlyStopper(patience=30, min_decrease=0.003)
         if model_path:
             print(f"Loading model from {model_path}...", flush=True)
             snapshot = torch.load(model_path)

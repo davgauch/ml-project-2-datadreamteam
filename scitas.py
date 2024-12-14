@@ -52,7 +52,7 @@ def main(rank, world_size, epochs, save_every, data_dir, working_dir, batch_size
         images_path_bc=f"{data_dir}/{prefix}X_BC_train.npy",
         images_path_m=f"{data_dir}/{prefix}X_M_train.npy",
         ghi_values_path=f"{data_dir}/{prefix}labels_train.npy",
-        meteo_file_path=f"{data_dir}/{prefix}meteo_train.npy",
+        meteo_file_path=f"{data_dir}/normalized_meteo_train.npy",
         meteo_features=meteo_feature_indices,
         subset=subset
     )
@@ -60,7 +60,7 @@ def main(rank, world_size, epochs, save_every, data_dir, working_dir, batch_size
         images_path_bc=f"{data_dir}/{prefix}X_BC_val.npy",
         images_path_m=f"{data_dir}/{prefix}X_M_val.npy",
         ghi_values_path=f"{data_dir}/{prefix}labels_val.npy",
-        meteo_file_path=f"{data_dir}/{prefix}meteo_val.npy",
+        meteo_file_path=f"{data_dir}/normalized_meteo_val.npy",
         meteo_features=meteo_feature_indices,
         subset=subset
     )
@@ -68,7 +68,7 @@ def main(rank, world_size, epochs, save_every, data_dir, working_dir, batch_size
         images_path_bc=f"{data_dir}/{prefix}X_BC_test.npy",
         images_path_m=f"{data_dir}/{prefix}X_M_test.npy",
         ghi_values_path=f"{data_dir}/{prefix}labels_test.npy",
-        meteo_file_path=f"{data_dir}/{prefix}meteo_test.npy",
+        meteo_file_path=f"{data_dir}/normalized_meteo_test.npy",
         meteo_features=meteo_feature_indices,
         subset=subset
     )

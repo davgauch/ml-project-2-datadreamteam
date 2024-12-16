@@ -108,7 +108,7 @@ class Trainer:
         self.model_snapshot_file = f"{working_dir}/weights.pt"
         self.test_true_labels_file = f"{working_dir}/true_labels.npy"
         self.test_pred_lower_bounds_file = f"{working_dir}/pred_lower_bounds.npy"
-        self.test_pred_mean_file= f"{working_dir}/pred_mean.npy"
+        self.test_pred_median_file= f"{working_dir}/pred_median.npy"
         self.test_pred_upper_bounds_file = f"{working_dir}/pred_upper_bounds.npy"
 
         # Ensure the directories for saving models and loss files exist
@@ -306,8 +306,8 @@ class Trainer:
                 img1, img2, meteo_data, labels = img1.to(device).float(), img2.to(device).float(), meteo_data.to(device).float(), labels.to(device).float()
 
                 # Use predict_intervals and model call with meteo_data
-                lower_bound, mean, upper_bound = predict_intervals(self.model, img1, img2, meteo_data=meteo_data)
-                pred_intervals.append((lower_bound.cpu().numpy(), mean.cpu().numpy(), upper_bound.cpu().numpy()))
+                lower_bound, median, upper_bound = predict_intervals(self.model, img1, img2, meteo_data=meteo_data)
+                pred_intervals.append((lower_bound.cpu().numpy(), median.cpu().numpy(), upper_bound.cpu().numpy()))
 
                 outputs = self.model(img1, img2, meteo_data=meteo_data)
                 loss = self.criterion(outputs, labels)
@@ -328,7 +328,7 @@ class Trainer:
 
         # Post-processing
         lower_bounds = np.concatenate([pi[0] for pi in pred_intervals], axis=0)
-        mean = np.concatenate([pi[1] for pi in pred_intervals], axis=0)
+        median = np.concatenate([pi[1] for pi in pred_intervals], axis=0)
         upper_bounds = np.concatenate([pi[2] for pi in pred_intervals], axis=0)
         true_labels = np.concatenate(true_labels, axis=0)  # Remains 1D
 
@@ -337,7 +337,7 @@ class Trainer:
 
         # Save predictions and labels for analysis
         np.save(self.test_pred_lower_bounds_file, lower_bounds)
-        np.save(self.test_pred_mean_file, mean)
+        np.save(self.test_pred_median_file, median)
         np.save(self.test_pred_upper_bounds_file, upper_bounds)
         np.save(self.test_true_labels_file, true_labels)  # Original labels saved here
 
